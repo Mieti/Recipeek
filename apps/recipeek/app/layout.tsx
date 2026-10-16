@@ -1,0 +1,25 @@
+import type { Metadata } from "next";
+import "./globals.css";
+
+export const metadata: Metadata = {
+  title: "Recipeek · La tua cucina personale",
+  description: "Raccogli, organizza e cucina le ricette che ami. Il tuo ricettario personale, un passaggio alla volta.",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: { capable: true, statusBarStyle: "default", title: "Recipeek" },
+  icons: {
+    icon: "/favicon.svg",
+    shortcut: "/favicon.svg",
+  },
+};
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <html lang="it">
+      <body className="antialiased">{children}</body>
+    </html>
+  );
+}

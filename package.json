@@ -1,0 +1,25 @@
+{
+  "name": "recipeek",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20.17.0"
+  },
+  "scripts": {
+    "lab": "tsx --env-file=.env.local tools/import-lab/server.ts",
+    "test": "tsx --test tools/import-lab/tests/import.test.ts tools/import-lab/tests/server.test.ts",
+    "typecheck": "tsc --noEmit",
+    "check": "npm run typecheck && npm test"
+  },
+  "dependencies": {
+    "cheerio": "^1.0.0",
+    "ipaddr.js": "^2.5.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.43",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  }
+}

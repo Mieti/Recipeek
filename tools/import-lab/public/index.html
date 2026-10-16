@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="it">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Recipeek · Laboratorio import</title><link rel="stylesheet" href="/style.css"><script src="/app.js" defer></script></head>
+<body>
+<header><a class="brand" href="/">recipeek<span>✳</span></a><span class="pill">Laboratorio locale · v0.1</span></header>
+<main>
+  <div class="intro"><p class="eyebrow">DAL CONTENUTO ALLA CUCINA</p><h1>Una ricetta da ritrovare.<br>Una bozza da fare tua.</h1><p>Proviamo l’importazione, controlliamo le dosi, conserviamo la fonte.</p></div>
+  <div class="workspace">
+    <section class="panel input-panel" aria-labelledby="input-heading">
+      <div class="section-title"><span class="number">01</span><h2 id="input-heading">Da dove partiamo?</h2></div>
+      <div class="tabs" aria-label="Tipo di contenuto"><button type="button" data-mode="url" aria-pressed="true">Link</button><button type="button" data-mode="photos" aria-pressed="false">Foto di pagine</button><button type="button" data-mode="text" aria-pressed="false">Testo</button></div>
+      <form id="import-form">
+        <div id="url-panel"><label for="url">Instagram, TikTok o sito di ricette</label><input type="url" id="url" placeholder="https://…" autocomplete="off"><p class="hint">Per i social leggiamo didascalia e parlato disponibili. I fotogrammi non sono ancora analizzati.</p><div id="recipe-choice" hidden><label for="recipe-index">Scegli la ricetta presente nella pagina</label><select id="recipe-index"></select></div></div>
+        <div id="photos-panel" hidden><label class="upload" for="photos"><strong>Scegli le foto della ricetta</strong><span>Una pagina, una doppia pagina o uno screenshot</span><small>JPEG, PNG, WebP · fino a 4 foto · 12 MB totali</small></label><input id="photos" type="file" accept="image/jpeg,image/png,image/webp" multiple><p class="hint">Le pagine vengono lette nell’ordine mostrato. Per foto HEIC, esporta prima in JPEG.</p><div id="previews" class="previews"></div></div>
+        <div id="text-panel" hidden><label for="source-text">Incolla ingredienti e procedimento</label><textarea id="source-text" rows="10" maxlength="24000" placeholder="Titolo, ingredienti, dosi e passaggi…"></textarea></div>
+        <p class="disclosure">Con “Crea bozza” il contenuto viene inviato a Gemini; i link social anche a Supadata. L’esempio locale non usa servizi esterni.</p>
+        <button type="submit" class="primary" id="import-button">Crea bozza <span>↗</span></button>
+        <button type="button" class="secondary" id="demo-button">Prova un esempio locale, senza AI</button>
+      </form>
+      <div id="provider-status" class="provider-status"></div>
+      <p id="status" role="status" aria-live="polite"></p>
+      <p id="error" role="alert" hidden></p>
+    </section>
+    <section class="panel result-panel" aria-labelledby="result-heading">
+      <div class="section-title"><span class="number">02</span><h2 id="result-heading">Rivedi e fai tua</h2><span id="result-badge" class="pill" hidden></span></div>
+      <div id="empty" class="empty"><span class="empty-icon">✳</span><h3>La prossima ricetta inizia qui.</h3><p>Troverai ingredienti, passaggi e punti da verificare.<br>Le informazioni mancanti resteranno visibili.</p></div>
+      <div id="result" hidden>
+        <p id="metrics" class="hint"></p>
+        <details id="warnings-box"><summary id="warnings-summary">Da controllare</summary><ul id="warnings"></ul></details>
+        <div class="recipe-fields"><label for="title">Titolo</label><input id="title"><div class="inline-fields"><label>Porzioni<input id="servings" type="number" min="0.1" step="any" placeholder="Non indicate"></label><label>Preparazione · min<input id="prep" type="number" min="0" step="any" placeholder="Non indicata"></label><label>Cottura · min<input id="cook" type="number" min="0" step="any" placeholder="Non indicata"></label></div></div>
+        <div class="subheading"><h3>Ingredienti</h3><button type="button" id="add-ingredient" class="text-button">+ Aggiungi</button></div><div id="ingredients"></div>
+        <div class="subheading"><h3>Procedimento</h3><button type="button" id="add-step" class="text-button">+ Aggiungi</button></div><div id="steps"></div>
+        <details><summary>Confronta con il materiale acquisito</summary><div id="sources"></div></details>
+        <details><summary>Dati completi della bozza originale</summary><pre id="raw"></pre></details>
+        <div class="review"><label for="rating">Quanto lavoro ha richiesto la bozza?</label><select id="rating"><option value="usable">Già utilizzabile</option><option value="minor_edits">Piccole correzioni</option><option value="major_edits">Correzioni importanti</option><option value="unusable">Non utilizzabile</option></select><label for="notes">Note per il test</label><textarea id="notes" rows="2" placeholder="Dosi sbagliate, pagina poco leggibile, passaggi mancanti…"></textarea><label class="checkbox"><input type="checkbox" id="confirmed">Ho controllato dosi, ingredienti e passaggi rispetto alla fonte.</label><div class="actions"><button type="button" class="primary" id="save">Conferma e salva il test</button><button type="button" class="secondary" id="reject">Rigetta</button><button type="button" class="text-button" id="export">Esporta JSON</button></div><p class="hint">Il risultato del test viene salvato sul computer. Questo laboratorio non è ancora il catalogo dell’app.</p></div>
+      </div>
+    </section>
+  </div>
+  <footer>Prima la qualità della ricetta. Poi il resto. <span>Foto originali mantenute solo nella memoria della sessione.</span></footer>
+</main>
+</body>
+</html>
