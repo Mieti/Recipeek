@@ -13,6 +13,7 @@ export default function Cooking({initial,userId,onExit}:{initial:{recipe:Recipe;
   const stage=useRef<HTMLDivElement>(null),scroll=useRef<HTMLDivElement>(null),heading=useRef<HTMLHeadingElement>(null),gesture=useRef<StepTap|null>(null);
   const step=r.steps[index],last=index===r.steps.length-1,sessionKey=`recipeek:cooking:${userId}`,timerKey=`recipeek:timer:${userId}:${r.id}:${step.id}`;
   const go=(direction:'previous'|'next')=>setIndex(old=>adjacentStep(old,r.steps.length,direction));
+  useEffect(()=>{const previous=document.body.style.overflow;document.body.style.overflow='hidden';return()=>{document.body.style.overflow=previous;};},[]);
   useEffect(()=>{if(!done)writeKitchenState(sessionKey,JSON.stringify({...initial,step:index}));},[index,initial,sessionKey,done]);
   useEffect(()=>{scroll.current?.scrollTo({top:0});heading.current?.focus({preventScroll:true});},[index]);
   useEffect(()=>{
@@ -33,7 +34,7 @@ export default function Cooking({initial,userId,onExit}:{initial:{recipe:Recipe;
   }
   function finish(){removeKitchenState(sessionKey);setDone(true);}
   return <div className="focus-cooking">
-    <header className="focus-header"><button className="focus-exit" onClick={()=>onExit(done)} aria-label="Esci dalla modalità cooking"><ArrowLeft size={19}/><span>Ricettario</span></button><div className="focus-recipe"><span>IN CUCINA CON RECIPEEK</span><strong>{r.title}</strong></div><span className={`focus-wake ${wake?'is-on':''}`} title={wake?'Lo schermo rimane acceso finché il browser lo consente':'Lo schermo può spegnersi'}><Sun size={17}/><span>{wake?'Schermo attivo':'Cooking'}</span></span></header>
+    <header className="focus-header"><button className="focus-exit" onClick={()=>onExit(done)} aria-label="Esci dalla modalità cooking"><ArrowLeft size={19}/><span>Ricettario</span></button><div className="focus-recipe"><strong>{r.title}</strong></div><span className={`focus-wake ${wake?'is-on':''}`} title={wake?'Lo schermo rimane acceso finché il browser lo consente':'Lo schermo può spegnersi'}><Sun size={17}/><span>{wake?'Schermo attivo':'Cooking'}</span></span></header>
     <div className="focus-progress" role="progressbar" aria-label="Avanzamento della ricetta" aria-valuemin={0} aria-valuemax={r.steps.length} aria-valuenow={done?r.steps.length:index+1}><span style={{width:`${done?100:(index+1)/r.steps.length*100}%`}}/></div>
     {done?<main className="focus-finished"><div className="focus-finished-icon"><ChefHat size={44} strokeWidth={1.4}/></div><p className="eyebrow">FATTO CON LE TUE MANI</p><h1>A tavola.</h1><p>Hai completato {r.title}. Buon appetito!</p><button className="button primary" onClick={()=>onExit(true)}>Torna al ricettario<CheckCheck size={18}/></button></main>:<>
       <div className="focus-stage" ref={stage} onPointerDown={down} onPointerUp={up} onPointerCancel={()=>{gesture.current=null;}}>
@@ -41,8 +42,8 @@ export default function Cooking({initial,userId,onExit}:{initial:{recipe:Recipe;
         <div className="focus-stage-scroll" ref={scroll}>
           <main className={`focus-step ${step.image?'with-photo':''}`} id="focused-step" key={step.id}>
             <div className="focus-step-top"><span className="focus-step-number">{String(index+1).padStart(2,'0')}</span><div><p className="eyebrow">{index===0?'SI COMINCIA':last?'IL TOCCO FINALE':'UN PASSAGGIO ALLA VOLTA'}</p><p className="focus-step-count" aria-live="polite">Passaggio {index+1} di {r.steps.length}</p></div></div>
-            {step.image&&<img className="focus-step-photo" src={step.image} alt={`Foto del passaggio ${index+1}`} draggable={false}/>}
             <h1 ref={heading} tabIndex={-1}>{step.text}</h1>
+            {step.image&&<img className="focus-step-photo" src={step.image} alt={`Foto del passaggio ${index+1}`} draggable={false}/>}
             {step.ingredients.length>0&&<section className="focus-step-ingredients" aria-label="Ingredienti di questo passaggio"><p className="eyebrow">TI SERVE ADESSO</p><div>{step.ingredients.map(use=>{const ingredient=r.ingredients.find(item=>item.id===use.ingredientId);if(!ingredient)return null;return <span className="focus-ingredient" key={ingredient.id}><span>{ingredient.name}</span>{use.quantity!==null?<strong>{formatQuantity(use.quantity,initial.factor)} {formatUnit(ingredient.unit,use.quantity*initial.factor)}</strong>:ingredient.quantity===null?<strong>q.b.</strong>:null}</span>;})}</div></section>}
             {step.timerMinutes>0&&<div data-no-step-tap><StepTimer key={timerKey} storageKey={timerKey} minutes={step.timerMinutes}/></div>}
             {step.videoUrl&&<a className="focus-video" href={step.videoUrl} target="_blank" rel="noopener noreferrer"><Play size={16}/>Guarda questo passaggio<ArrowUpRight size={15}/></a>}
