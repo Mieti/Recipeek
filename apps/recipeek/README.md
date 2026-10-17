@@ -13,7 +13,7 @@ Web app adattiva per smartphone, tablet e desktop. Il primo deploy è privato, c
 - Profilo facoltativamente visibile, follow e ricette condivise con chi ha accesso al sito.
 - Backup JSON e import di massimo 100 ricette per file. L’import crea nuove copie private, non sincronizza o deduplica. I file delle foto non sono inclusi.
 
-Le modifiche alle ricette condivise sono riservate al proprietario. Un controllo di revisione evita di sovrascrivere modifiche salvate in un’altra finestra. Non vengono eseguite chiamate AI nell’app.
+Le modifiche alle ricette condivise sono riservate al proprietario. Un controllo di revisione evita di sovrascrivere modifiche salvate in un’altra finestra e un aggiornamento non può ricreare una ricetta eliminata. Non vengono eseguite chiamate AI nell’app.
 
 ## Sviluppo locale
 
@@ -31,7 +31,7 @@ Per la prima installazione locale, applica le migrazioni in ordine una sola volt
 
 ```powershell
 node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0000_odd_midnight.sql
-npm run dev -- --hostname 127.0.0.1
+npm run dev -- --host 127.0.0.1
 ```
 
 Apri l’URL locale stampato (normalmente `http://127.0.0.1:5173`). Il login di sviluppo è simulato dal template soltanto su loopback; non viene incluso nel build di produzione. Database locale e ospitato sono distinti.
@@ -52,12 +52,14 @@ Questa è la prima versione web, non una build iOS/Android nativa. Accesso inizi
 
 La sessione cooking conserva una copia della ricetta e i timer nel browser, sul dispositivo corrente. I timer si basano sull’orologio: possono riprendere il conteggio dopo una pausa, ma su iOS la pagina può essere sospesa e non garantisce avvisi a schermo spento. Non sostituire un timer di sicurezza con quello del browser. Per la sessione contano le dosi selezionate all’avvio; modificare successivamente la ricetta non riscrive la sessione in corso.
 
-Gli elenchi sono limitati a 1.000 ricette e 200 profili. Il nome normalizzato degli ingredienti unifica maiuscole, accenti e spazi; sinonimi e forme alimentari differenti restano distinti. Le immagini rimosse dall’editor o da una ricetta eliminata non vengono ancora ripulite automaticamente da R2: è previsto un futuro processo di raccolta degli oggetti non referenziati. Le note sono incluse quando condividi una ricetta.
+Il ricettario personale ha un limite di 1.000 ricette, applicato anche dal server. La pagina comunitaria mostra fino a 1.000 ricette e 200 profili. Il backup viene suddiviso in parti da massimo 100 ricette e 5 MB, da scaricare e reimportare singolarmente. Un import interrotto segnala quante ricette sono state già aggiunte. Il nome normalizzato degli ingredienti unifica maiuscole, accenti e spazi; sinonimi e forme alimentari differenti restano distinti. Le immagini rimosse dall’editor o da una ricetta eliminata non vengono ancora ripulite automaticamente da R2: è previsto un futuro processo di raccolta degli oggetti non referenziati. Le note sono incluse quando condividi una ricetta.
 
 L’AI e il relativo benchmark rimangono nel [laboratorio separato](../../tools/import-lab). Le foto importate in questa app sono illustrazioni della ricetta: non vengono analizzate per estrarne testo o ingredienti.
 
 ## Verifica
 
-Sei test automatici con SQLite reale coprono privacy, permessi, salvataggio/indice ingredienti, modifiche concorrenti, dosi/teglie, validazione e ricerca. Un test HTTP locale aggiuntivo copre gli endpoint e lo storage foto. La verifica nel browser copre accesso locale, esempi persistenti, ricerca, editor, dosi, timer e ripresa dopo ricaricamento. I provider AI non partecipano a questi test.
+Diciannove test automatici coprono privacy e permessi su ricette e foto, revoca della condivisione, indice ingredienti, modifiche/cancellazioni concorrenti, quote, dosi e teglie, body HTTP limitati durante la lettura, CSRF, backup, storage browser indisponibile e timer. I test del repository usano SQLite reale. Un test HTTP locale aggiuntivo copre gli endpoint e lo storage foto. La verifica nel browser copre accesso locale, esempi persistenti, ricerca, editor, dosi, timer e ripresa dopo ricaricamento. I provider AI non partecipano a questi test.
 
 Fotografie illustrative da [Unsplash](https://unsplash.com/), distribuite come asset locali: gli URL delle immagini sono documentati in `scripts/download-images.mjs`. Le ricette di esempio sono testi originali di progetto e non pretendono corrispondenza esatta con la foto.
+
+Il controllo sicurezza del 17 ottobre 2026 è documentato nel [report](../../docs/security/2026-10-17-review.md). L’audit npm delle dipendenze di produzione è pulito; la catena di sviluppo ha ancora segnalazioni transitive documentate. Il conteggio npm non sostituisce l’analisi del bundle effettivamente pubblicato. Gli header del Worker impediscono il caching delle risposte personali e limitano referrer, oggetti incorporati e framing esterno.

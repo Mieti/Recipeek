@@ -2,22 +2,28 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 const origin='http://127.0.0.1:5173';
-assert.equal((await fetch(`${origin}/api/recipes`)).status,401);
+async function bufferedFetch(url,options){const response=await fetch(url,options);return new Response(await response.arrayBuffer(),response);}
+assert.equal((await bufferedFetch(`${origin}/api/recipes`)).status,401);
 const signIn=await fetch(`${origin}/signin-with-chatgpt?return_to=/`,{redirect:'manual'});
 const cookie=signIn.headers.getSetCookie().map(v=>v.split(';')[0]).join('; ');
 assert.ok(cookie,'portable mock sign-in must provide a development cookie');
-const request=async(path,method='GET',value,extra={})=>fetch(`${origin}/api/${path}`,{method,headers:{cookie,...(value?{'content-type':'application/json'}:{}),...extra},body:value?JSON.stringify(value):undefined});
+const request=async(path,method='GET',value,extra={})=>bufferedFetch(`${origin}/api/${path}`,{method,headers:{cookie,...(value?{'content-type':'application/json'}:{}),...extra},body:value?JSON.stringify(value):undefined});
 assert.equal((await request('recipes','POST',{recipe:{}},{origin:'https://unrelated.example'})).status,403);
 assert.equal((await request('recipes','POST',{recipe:{}})).status,400);
+assert.equal((await request('me','DELETE')).status,405);
+assert.equal((await request('recipes/unknown/extra','DELETE')).status,404);
+assert.equal((await request('recipes/unknown','POST',{recipe:{}})).status,405);
+assert.equal((await request('recipes','POST',{}, {origin:'http://127.0.0.1:5173'})).status,400);
+const oversized = await bufferedFetch(`${origin}/api/recipes`,{method:'POST',headers:{cookie,'content-type':'application/json'},body:JSON.stringify({text:'x'.repeat(210_000)})});assert.equal(oversized.status,413);
 const recipe={title:'Verifica API · temporanea',description:'Creata da un test locale',category:'Antipasti',method:'Senza cottura',servings:2,prepMinutes:5,cookMinutes:0,image:'',sourceUrl:'',sourceAuthor:'Test',notes:'',collection:'Test',favorite:false,visibility:'private',pan:null,ingredients:[{id:'i1',name:'Pomodoro',quantity:2,unit:'pezzi'}],steps:[{id:'s1',text:'Taglia il pomodoro e servi.',ingredients:[{ingredientId:'i1',quantity:2}],image:'',videoUrl:'',timerMinutes:0}]};
 const createdResponse=await request('recipes','POST',{recipe});assert.equal(createdResponse.status,201);const created=await createdResponse.json();
 try{
-  const invalidUpload=await fetch(`${origin}/api/media`,{method:'POST',headers:{cookie,'content-type':'image/jpeg'},body:'not-an-image'});assert.equal(invalidUpload.status,400);
+  const invalidUpload=await bufferedFetch(`${origin}/api/media`,{method:'POST',headers:{cookie,'content-type':'image/jpeg'},body:'not-an-image'});assert.equal(invalidUpload.status,400);
   const upload=await fetch(`${origin}/api/media`,{method:'POST',headers:{cookie,'content-type':'image/jpeg'},body:await readFile(new URL('../public/images/salad.jpg',import.meta.url))});assert.equal(upload.status,201);const media=await upload.json();
   const imageResponse=await fetch(`${origin}${media.url}`,{headers:{cookie}});assert.equal(imageResponse.status,200);assert.match(imageResponse.headers.get('content-type'),/image\/jpeg/);assert.ok((await imageResponse.arrayBuffer()).byteLength>1000);
   const updatedResponse=await request(`recipes/${created.id}`,'PATCH',{recipe:{...recipe,image:media.url,title:'Verifica API · aggiornata'},updatedAt:created.updatedAt});assert.equal(updatedResponse.status,200);const updated=await updatedResponse.json();assert.equal(updated.image,media.url);
   assert.equal((await request(`recipes/${created.id}`,'PATCH',{recipe,updatedAt:created.updatedAt})).status,409);
   const stored=await(await request(`recipes/${created.id}`)).json();assert.equal(stored.title,'Verifica API · aggiornata');
   const ingredients=await(await request('ingredients')).json();assert.ok(ingredients.some(i=>i.name==='Pomodoro'));
-  console.log('PASS: autenticazione, CSRF, validazione, CRUD persistente, conflitto revisione, upload/lettura foto, anagrafica ingredienti');
+  console.log('PASS: autenticazione, CSRF, metodi/percorsi, limite body, validazione, CRUD persistente, conflitto revisione, upload/lettura foto, anagrafica ingredienti');
 }finally{const deleted=await request(`recipes/${created.id}`,'DELETE');assert.equal(deleted.status,200);assert.equal((await request(`recipes/${created.id}`)).status,404);}

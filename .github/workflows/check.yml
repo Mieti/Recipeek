@@ -1,5 +1,7 @@
 name: Recipeek checks
 on: [push, pull_request]
+permissions:
+  contents: read
 jobs:
   check:
     runs-on: ubuntu-latest
@@ -17,6 +19,8 @@ jobs:
       - run: npm ci
         working-directory: apps/recipeek
       - run: npm run typecheck
+        working-directory: apps/recipeek
+      - run: npm audit --omit=dev --audit-level=high
         working-directory: apps/recipeek
       - run: npm test
         working-directory: apps/recipeek
