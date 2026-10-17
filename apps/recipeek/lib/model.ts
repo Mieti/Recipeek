@@ -17,7 +17,7 @@ export const recipeSchema = z.object({
   }
 });
 export type RecipeInput = z.infer<typeof recipeSchema>;
-export type Recipe = RecipeInput & { id: string; ownerId: string; authorName: string; createdAt: string; updatedAt: string };
+export type Recipe = RecipeInput & { id: string; ownerId: string; authorName: string; createdAt: string; updatedAt: string; deletedAt?:string|null };
 export type Profile = { id: string; name: string; bio: string; discoverable: number; following?: boolean; recipeCount?: number };
 export function blankRecipe(): RecipeInput { return {title: '', description: '', category: 'Primi', method: 'Fornelli', servings: 2, prepMinutes: 10, cookMinutes: 15, image: '', sourceUrl: '', sourceAuthor: '', notes: '', collection: '', favorite: false, visibility: 'private', pan: null, ingredients: [{id: crypto.randomUUID(), name: '', quantity: null, unit: 'g'}], steps: [{id: crypto.randomUUID(), text: '', image: '', videoUrl: '', timerMinutes: 0, ingredients: []}]}; }
 export function ingredientKey(name: string) { return name.trim().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('it').replace(/\s+/g, ' '); }

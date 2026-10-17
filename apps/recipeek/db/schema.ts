@@ -4,7 +4,7 @@ export const profiles = sqliteTable('profiles', {
   id: text('id').primaryKey(), name: text('name').notNull(), bio: text('bio').notNull().default(''), discoverable: integer('discoverable').notNull().default(0), createdAt: text('created_at').notNull(),
 });
 export const recipes = sqliteTable('recipes', {
-  id: text('id').primaryKey(), ownerId: text('owner_id').notNull().references(() => profiles.id), title: text('title').notNull(), category: text('category').notNull(), method: text('method').notNull(), visibility: text('visibility').notNull().default('private'), favorite: integer('favorite').notNull().default(0), collection: text('collection').notNull().default(''), document: text('document').notNull(), createdAt: text('created_at').notNull(), updatedAt: text('updated_at').notNull(),
+  id: text('id').primaryKey(), ownerId: text('owner_id').notNull().references(() => profiles.id), title: text('title').notNull(), category: text('category').notNull(), method: text('method').notNull(), visibility: text('visibility').notNull().default('private'), favorite: integer('favorite').notNull().default(0), collection: text('collection').notNull().default(''), document: text('document').notNull(), createdAt: text('created_at').notNull(), updatedAt: text('updated_at').notNull(), deletedAt: text('deleted_at'),
 });
 export const ingredients = sqliteTable('ingredients', {
   id: text('id').primaryKey(), ownerId: text('owner_id').notNull().references(() => profiles.id), canonical: text('canonical').notNull(), display: text('display').notNull(),

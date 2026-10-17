@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {fixture} from './database.ts';
 import {reserveUpload,storeUpload,cleanupUploads,storageUsage,enforceRateLimit,storagePolicy} from '../lib/media-storage.ts';
-import {saveRecipe,removeRecipe,readableUpload} from '../lib/repository.ts';
+import {saveRecipe,removeRecipe,purgeRecipe,readableUpload} from '../lib/repository.ts';
 import {examples} from '../lib/examples.ts';
 import {HttpError} from '../lib/http.ts';
 import {sanitizePhoto} from '../lib/photo.ts';
@@ -60,7 +60,7 @@ test('rimuovere l’ultimo riferimento fa ripartire 24 ore di attesa, anche canc
     seed(sqlite,'cover');seed(sqlite,'step');
     const original=await saveRecipe(db,'alice',{...examples[0],image:'/api/media/cover',steps:[{...examples[0].steps[0],image:'/api/media/step'}]});
     const changed=await saveRecipe(db,'alice',{...original,image:''},original.id,original.updatedAt);
-    await removeRecipe(db,changed.id,'alice');
+    await removeRecipe(db,changed.id,'alice');await purgeRecipe(db,changed.id,'alice');
     assert.equal((await cleanupUploads(db,bucket(),'alice')).removed,0);
     assert.equal((await cleanupUploads(db,bucket(),'alice',Date.now()+25*3600_000)).removed,2);
   }finally{sqlite.close();}

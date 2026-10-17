@@ -1,6 +1,7 @@
 // Optional integration smoke against the portable preview. Never run against a hosted Site.
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { inspectArchive } from '../lib/archive.ts';
 const origin='http://127.0.0.1:5173';
 async function bufferedFetch(url,options){const response=await fetch(url,options);return new Response(await response.arrayBuffer(),response);}
 assert.equal((await bufferedFetch(`${origin}/api/recipes`)).status,401);
@@ -35,5 +36,17 @@ try{
   assert.equal((await request(`recipes/${created.id}`,'PATCH',{recipe,updatedAt:created.updatedAt})).status,409);
   const stored=await(await request(`recipes/${created.id}`)).json();assert.equal(stored.title,'Verifica API · aggiornata');
   const ingredients=await(await request('ingredients')).json();assert.ok(ingredients.some(i=>i.name==='Pomodoro'));
-  console.log('PASS: autenticazione, CSRF, metodi/percorsi, limite body, CRUD, conflitto, JPEG/PNG/WebP senza metadati personali, conteggio storage e protezione foto recenti, anagrafica ingredienti');
-}finally{const deleted=await request(`recipes/${created.id}`,'DELETE');assert.equal(deleted.status,200);assert.equal((await request(`recipes/${created.id}`)).status,404);}
+  const full=await request(`backup?ids=${created.id}`);assert.equal(full.status,200);assert.match(full.headers.get('content-type'),/zip/);
+  const entries=await inspectArchive(await full.blob());assert.equal(entries.length,1);assert.equal(entries[0].recipe.image,media.url);
+  assert.deepEqual(await(await request('imports/check','POST',entries.map(e=>e.source))).json(),[true]);
+  assert.equal((await request('backup?ids=missing')).status,404);
+  const restorationBody=await readFile(new URL('./fixtures/photo.jpeg',import.meta.url));let restoredPhoto;
+  for(let i=0;i<2;i++){const response=await bufferedFetch(`${origin}/api/import-media`,{method:'POST',headers:{cookie,'content-type':'image/jpeg'},body:restorationBody});assert.equal(response.status,201);const value=await response.json();if(restoredPhoto)assert.equal(value.url,restoredPhoto);restoredPhoto=value.url;}
+  const source={key:`smoke-${crypto.randomUUID()}`};let imported;
+  try{const first=await(await request('imports','POST',{recipe,source})).json();assert.equal(first.duplicate,false);imported=first.recipe;assert.ok(imported.id);const second=await(await request('imports','POST',{recipe:{...recipe,title:'Non sovrascrivere'},source})).json();assert.equal(second.duplicate,true);}finally{if(imported){await request(`recipes/${imported.id}`,'DELETE');await request(`trash/${imported.id}`,'DELETE');}}
+  await request(`recipes/${created.id}`,'DELETE');assert.equal((await request(`recipes/${created.id}`)).status,404);
+  assert.ok((await(await request('trash')).json()).some(r=>r.id===created.id));
+  const recovered=await request(`trash/${created.id}`,'POST');assert.equal(recovered.status,200);assert.equal((await recovered.json()).visibility,'private');
+  assert.equal((await request(`recipes/${created.id}`,'PATCH',{recipe,updatedAt:updated.updatedAt})).status,409);
+  console.log('PASS: API, privacy, foto, ZIP completo verificabile, import foto senza duplicati, import ricette idempotente, cestino e ripristino privato');
+}finally{const deleted=await request(`recipes/${created.id}`,'DELETE');assert.equal(deleted.status,200);assert.equal((await request(`recipes/${created.id}`)).status,404);assert.equal((await request(`trash/${created.id}`,'DELETE')).status,200);}

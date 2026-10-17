@@ -15,6 +15,13 @@
       "when": 1792222423388,
       "tag": "0001_bright_elektra",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1792224994075,
+      "tag": "0002_melted_omega_sentinel",
+      "breakpoints": true
     }
   ]
 }

@@ -10,9 +10,9 @@ const unreferenced = `uploads.id NOT IN (
 )`;
 
 // Fixed UTC windows live in D1, not in an individual Worker isolate.
-export async function enforceRateLimit(db: Database, owner: string, scope: 'api'|'upload', now = Date.now()) {
-  const seconds = Math.floor(now/1000), duration = scope==='upload'?3600:60;
-  const start = Math.floor(seconds/duration)*duration, limit = scope==='upload'?storagePolicy.uploadLimit:storagePolicy.apiLimit;
+export async function enforceRateLimit(db: Database, owner: string, scope: 'api'|'upload'|'restore'|'backup', now = Date.now()) {
+  const seconds = Math.floor(now/1000), duration = scope==='api'?60:3600;
+  const start = Math.floor(seconds/duration)*duration, limit = {api:storagePolicy.apiLimit,upload:storagePolicy.uploadLimit,restore:600,backup:20}[scope];
   const result = await db.batch([
     db.prepare('DELETE FROM request_limits WHERE expires_at<=?').bind(seconds),
     db.prepare('INSERT INTO request_limits (owner_id,scope,window_start,expires_at,hits) VALUES (?,?,?,?,1) ON CONFLICT(owner_id,scope,window_start) DO UPDATE SET hits=hits+1 WHERE hits<?').bind(owner,scope,start,start+duration,limit),
@@ -32,8 +32,10 @@ export async function reserveUpload(db: Database, owner: string, id: string, byt
 }
 
 // The reservation precedes R2 writes: even interrupted requests remain accounted for.
-export async function storeUpload(db: Database, bucket: Pick<R2Bucket,'put'|'delete'>, owner: string, data: Uint8Array, type: string) {
-  const id = crypto.randomUUID(); await reserveUpload(db,owner,id,data.byteLength,type);
+export async function storeUpload(db: Database, bucket: Pick<R2Bucket,'put'|'delete'>, owner: string, data: Uint8Array, type: string, requestedId?:string) {
+  const id = requestedId??crypto.randomUUID();
+  if(requestedId){const existing=await db.prepare('SELECT state FROM uploads WHERE id=? AND owner_id=?').bind(id,owner).first<{state:string}>();if(existing?.state==='ready')return `/api/media/${id}`;if(existing)throw new HttpError(409,'Ripristino foto già in corso. Riprova tra poco.');}
+  try{await reserveUpload(db,owner,id,data.byteLength,type);}catch(error){if(requestedId&&await db.prepare("SELECT id FROM uploads WHERE id=? AND owner_id=? AND state='ready'").bind(id,owner).first())return `/api/media/${id}`;throw error;}
   try {
     await bucket.put(id,data,{httpMetadata:{contentType:type}});
     const ready = await db.prepare("UPDATE uploads SET state='ready' WHERE id=? AND owner_id=? AND state='pending'").bind(id,owner).run();

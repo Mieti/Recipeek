@@ -1,15 +1,17 @@
+import { exportArchive } from '../../../lib/export-archive';
+import { digest } from '../../../lib/identity';
 import { env } from 'cloudflare:workers';
 import { z } from 'zod';
 import { getChatGPTUser } from '../../chatgpt-auth';
 import { recipeSchema } from '../../../lib/model';
-import { listRecipes, readRecipe, readableUpload, saveRecipe, removeRecipe } from '../../../lib/repository';
+import { listRecipes, readRecipe, readableUpload, saveRecipe, removeRecipe, listTrash, restoreRecipe, purgeRecipe, importRecipe, findImported } from '../../../lib/repository';
 import { HttpError, readLimitedBody, readJsonBody, assertSameOrigin } from '../../../lib/http';
 import { enforceRateLimit, cleanupUploads, storageUsage, storeUpload } from '../../../lib/media-storage';
 import { sanitizePhoto } from '../../../lib/photo';
 
 export const dynamic = 'force-dynamic';
 const json = (body: unknown, status = 200, headers: Record<string,string> = {}) => Response.json(body, {status, headers: {'cache-control':'private, no-store', 'x-content-type-options':'nosniff', ...headers}});
-const methods: Record<string, string[]> = {me:['GET','PATCH'],ingredients:['GET'],recipes:['GET','POST'],'recipes/id':['GET','PATCH','DELETE'],people:['GET'],'follow/id':['POST','DELETE'],media:['POST'],'media/id':['GET'],storage:['GET','POST']};
+const methods: Record<string, string[]> = {me:['GET','PATCH'],ingredients:['GET'],recipes:['GET','POST'],'recipes/id':['GET','PATCH','DELETE'],people:['GET'],'follow/id':['POST','DELETE'],media:['POST'],'media/id':['GET'],storage:['GET','POST'],trash:['GET'],'trash/id':['POST','DELETE'],backup:['GET'],imports:['POST'],'imports/id':['POST'],'import-media':['POST']};
 
 async function handle(req: Request) {
   try {
@@ -39,8 +41,26 @@ async function handle(req: Request) {
       return json(await db.prepare('SELECT * FROM profiles WHERE id=?').bind(user.userId).first());
     }
     if (resource === 'ingredients') {
-      const result = await db.prepare('SELECT min(i.display) AS name, count(DISTINCT ri.recipe_id) AS recipes FROM ingredients i JOIN recipe_ingredients ri ON ri.ingredient_id=i.id WHERE i.owner_id=? GROUP BY i.canonical ORDER BY i.canonical').bind(user.userId).all();
+      const result = await db.prepare('SELECT min(i.display) AS name, count(DISTINCT ri.recipe_id) AS recipes FROM ingredients i JOIN recipe_ingredients ri ON ri.ingredient_id=i.id JOIN recipes r ON r.id=ri.recipe_id WHERE r.deleted_at IS NULL AND i.owner_id=? GROUP BY i.canonical ORDER BY i.canonical').bind(user.userId).all();
       return json(result.results);
+    }
+    if(resource==='trash') {
+      if(!id)return json(await listTrash(db,user.userId));
+      if(req.method==='POST'){const recipe=await restoreRecipe(db,id,user.userId);return json(recipe??{error:'Ricetta non trovata nel cestino.'},recipe?200:404);}
+      return json({removed:await purgeRecipe(db,id,user.userId)});
+    }
+    if(resource==='backup') {
+      if(!env.BUCKET)throw new HttpError(503,'Archivio foto non disponibile.');
+      await enforceRateLimit(db,user.userId,'backup');
+      const ids=z.array(z.string().regex(/^[a-zA-Z0-9-]{1,80}$/)).min(1).max(100).refine(ids=>new Set(ids).size===ids.length).parse((new URL(req.url).searchParams.get('ids')??'').split(','));
+      return await exportArchive(db,env.BUCKET,user.userId,ids);
+    }
+    if(resource==='imports') {
+      const source=z.object({key:z.string().min(1).max(500),sourceId:z.string().max(80).optional(),sourceOwner:z.string().max(200).optional()});
+      if(id==='check'){const sources=z.array(source).max(100).parse(await readJsonBody(req));const found=[];for(const item of sources)found.push(Boolean(await findImported(db,user.userId,item)));return json(found);}
+      if(id)return json({error:'Operazione non disponibile.'},404);
+      const value=z.object({recipe:recipeSchema,source}).parse(await readJsonBody(req));
+      return json(await importRecipe(db,user.userId,value.recipe,value.source));
     }
     if (resource === 'recipes') {
       if (req.method === 'GET') {
@@ -61,7 +81,7 @@ async function handle(req: Request) {
       if (req.method === 'DELETE' && id) return json({removed:await removeRecipe(db,id,user.userId)});
     }
     if (resource === 'people') {
-      const result = await db.prepare("SELECT p.id,p.name,p.bio,p.discoverable,EXISTS(SELECT 1 FROM follows f WHERE f.follower_id=? AND f.followed_id=p.id) AS following,(SELECT count(*) FROM recipes r WHERE r.owner_id=p.id AND r.visibility='shared') AS recipeCount FROM profiles p WHERE p.discoverable=1 AND p.id<>? ORDER BY p.name LIMIT 200").bind(user.userId,user.userId).all();
+      const result = await db.prepare("SELECT p.id,p.name,p.bio,p.discoverable,EXISTS(SELECT 1 FROM follows f WHERE f.follower_id=? AND f.followed_id=p.id) AS following,(SELECT count(*) FROM recipes r WHERE r.owner_id=p.id AND r.deleted_at IS NULL AND r.visibility='shared') AS recipeCount FROM profiles p WHERE p.discoverable=1 AND p.id<>? ORDER BY p.name LIMIT 200").bind(user.userId,user.userId).all();
       return json(result.results);
     }
     if (resource === 'follow' && id) {
@@ -80,16 +100,17 @@ async function handle(req: Request) {
       }
       return json(await storageUsage(db,user.userId));
     }
-    if (resource === 'media') {
+    if (resource === 'media'||resource==='import-media') {
       const bucket = env.BUCKET;
       if (!bucket) return json({error:'Archivio foto non disponibile.'},503);
       if (req.method === 'POST') {
-        await enforceRateLimit(db,user.userId,'upload');
+        await enforceRateLimit(db,user.userId,resource==='import-media'?'restore':'upload');
         const type = req.headers.get('content-type') || '';
         if (!['image/jpeg','image/png','image/webp'].includes(type)) return json({error:'Usa una foto JPEG, PNG o WebP.'},400);
         const {data} = sanitizePhoto(await readLimitedBody(req,6_000_000),type);
         await cleanupUploads(db,bucket,user.userId);
-        return json({url:await storeUpload(db,bucket,user.userId,data,type)},201);
+        const restoredId=resource==='import-media'?`restore-${await digest(JSON.stringify([user.userId,type,await digest(data)]))}`:undefined;
+        return json({url:await storeUpload(db,bucket,user.userId,data,type,restoredId)},201);
       }
       if (id) {
         const upload = await readableUpload(db,id,user.userId);
@@ -109,7 +130,7 @@ async function handle(req: Request) {
     if (error instanceof Error && error.message.includes('INVALID_MEDIA')) return json({error:'Una foto non è più disponibile o non appartiene al tuo account. Caricala di nuovo.'},400);
     if (error instanceof z.ZodError) return json({error:error.issues.map(i => i.message).join('. ')},400);
     if (error instanceof Error && error.message === 'NOT_FOUND') return json({error:'La ricetta è stata eliminata. Le modifiche non sono state salvate.'},404);
-    if (error instanceof Error && error.message === 'LIMIT_REACHED') return json({error:'Raggiunto il limite di 1.000 ricette. Esporta il ricettario e libera spazio prima di aggiungerne altre.'},409);
+    if (error instanceof Error && error.message === 'LIMIT_REACHED') return json({error:'Raggiunto il limite di 1.000 ricette. Esporta il ricettario ed elimina definitivamente dal cestino le ricette che non servono prima di aggiungerne altre.'},409);
     if (error instanceof Error && error.message === 'CONFLICT') return json({error:'La ricetta è cambiata in un’altra finestra. Ricaricala prima di salvare.'},409);
     if (error instanceof Error && error.message === 'FORBIDDEN') return json({error:'Operazione non consentita.'},403);
     console.error('Recipeek request failed',error instanceof Error ? (import.meta.env.DEV ? error.message : error.name) : 'Unknown');

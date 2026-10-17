@@ -8,7 +8,7 @@ export function readKitchenState(key:string, storage:StorageLike|null=browserSto
 export function writeKitchenState(key:string,value:string,storage:StorageLike|null=browserStorage()) { memory.set(key,value); try { storage?.setItem(key,value); } catch {} }
 export function removeKitchenState(key:string,storage:StorageLike|null=browserStorage()) { memory.delete(key); try { storage?.removeItem(key); } catch {} }
 export function clearKitchenState(userId:string) {
-  const ownKey=(key:string)=>key===`recipeek:cooking:${userId}`||key.startsWith(`recipeek:timer:${userId}:`);
+  const ownKey=(key:string)=>key===`recipeek:cooking:${userId}`||key.startsWith(`recipeek:timer:${userId}:`)||key.startsWith(`recipeek:draft:${userId}:`);
   for(const key of memory.keys())if(ownKey(key))memory.delete(key);
   try { const storage=window.localStorage; for(const key of Object.keys(storage))if(ownKey(key))storage.removeItem(key); } catch {}
 }
