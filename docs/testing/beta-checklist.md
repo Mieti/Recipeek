@@ -36,6 +36,7 @@ La versione rimane privata. Non sono stati invitati altri account automaticament
 - [ ] Scaricare un backup ZIP, individuarlo in File, ripristinarlo due volte e verificare il conteggio delle ricette.
 - [ ] Provare più parti di backup; simulare un’interruzione del ripristino e ripetere la stessa parte.
 - [ ] Uscire dall’account: le bozze locali devono essere rimosse. Cestino e ricette restano sul server.
+- [ ] Verificare Esci nella barra principale e nell’account, due schede aperte e Indietro dopo l’uscita. Si deve restare al login senza ripiego sull’accesso precedente; ripetere su Safari e dalla Home di iOS.
 
 ## Da eseguire con due account reali autorizzati
 
