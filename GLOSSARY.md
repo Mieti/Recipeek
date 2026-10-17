@@ -10,5 +10,5 @@
 - **Ricetta privata**: visibile soltanto al proprietario, anche quando il sito sarà condiviso.
 - **Ricetta condivisa**: visibile agli utenti che hanno accesso al sito; non equivale a pubblicazione anonima su Internet.
 - **Sessione cooking**: consultazione guidata dei passaggi, con fattore di ricalcolo e punto di ripresa conservati sul dispositivo.
-- **Account Recipeek**: identità gestita da Supabase Auth, con indirizzo verificato e uno o più metodi di accesso. L’UUID Auth è associato al profilo del ricettario; non coincide necessariamente con il precedente identificativo Sites e non viene collegato tramite semplice uguaglianza email. L’attivazione autonoma è distinta dall’accesso consentito dall’hosting.
+- **Account Recipeek**: identità gestita da Supabase Auth, con indirizzo verificato e uno o più metodi di accesso che aprono lo stesso profilo e ricettario. Durante la transizione il profilo Sites viene riconosciuto automaticamente solo con due identità contemporaneamente verificate e lo stesso indirizzo; l’uguaglianza di email non verificata o proveniente da un form non prova il possesso. L’attivazione autonoma è distinta dall’accesso consentito dall’hosting.
 - **Fonte**: link, autore, libro o altro riferimento di provenienza. Un riferimento non concede diritti di riutilizzo dei contenuti.

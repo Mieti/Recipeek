@@ -2,6 +2,8 @@
 
 Data: 17 ottobre 2026. Stato: integrazione implementata e verificata; attivazione autonoma e invio email agli amici da completare.
 
+Aggiornamento: l’[ADR 0005](0005-account-unico.md) sostituisce il collegamento manuale con il riconoscimento automatico dello stesso account verificato e corregge la precedenza delle identità durante la transizione.
+
 ## Contesto
 
 Riccardo ha richiesto registrazione email/password o provider principali e ha scelto di configurare Supabase da zero. Si riapre la scelta dell’ADR 0001 che riservava l’accesso a ChatGPT: resta adatta alla beta privata, ma non soddisfa la registrazione autonoma richiesta.

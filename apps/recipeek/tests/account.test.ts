@@ -2,8 +2,8 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {fixture} from './database.ts';
 import {authConfig,authMode,confirmedIdentity,safeAuthReturn} from '../lib/auth-config.ts';
-import {linkLegacyProfile,mappedProfile,resolveProfile} from '../lib/account-identity.ts';
-import {withAccount,accountContext} from '../lib/auth-context.ts';
+import {linkLegacyProfile,mappedProfile,resolveAccountProfile,resolveProfile} from '../lib/account-identity.ts';
+import {withAccount,accountContext,externalProfile} from '../lib/auth-context.ts';
 import {examples} from '../lib/examples.ts';
 import {saveRecipe,readRecipe} from '../lib/repository.ts';
 const alice='11111111-1111-4111-8111-111111111111',bob='22222222-2222-4222-8222-222222222222';
@@ -36,6 +36,44 @@ test('collegare due identità verificate conserva ricette e proprietario senza f
   }finally{sqlite.close();}
 });
 
+test('Google, email e altri provider dello stesso account ritrovano automaticamente lo stesso ricettario',async()=>{
+  const {db,sqlite}=fixture();try{
+    const recipe=await saveRecipe(db,'alice',examples[0]);
+    const legacy={userId:'alice',email:'ALICE@example.test'};
+    for(const provider of ['google','email','apple']){
+      const identity={...user,app_metadata:{providers:[provider]}};
+      assert.equal(await resolveAccountProfile(db,identity,legacy),'alice');
+      assert.equal(await resolveAccountProfile(db,identity), 'alice');
+      assert.equal((await readRecipe(db,recipe.id,'alice'))?.id,recipe.id);
+    }
+    assert.equal(sqlite.prepare('SELECT count(*) AS n FROM external_identities').get()?.n,1);
+    assert.equal(sqlite.prepare("SELECT count(*) AS n FROM profiles WHERE id LIKE 'sb_%'").get()?.n,0);
+  }finally{sqlite.close();}
+});
+
+test('il riconoscimento automatico rifiuta email non verificate, indirizzi diversi e metadati modificabili',async()=>{
+  const {db,sqlite}=fixture();try{
+    const recipe=await saveRecipe(db,'alice',examples[0]),legacy={userId:'alice',email:'alice@example.test'};
+    assert.equal(await resolveAccountProfile(db,{...user,email_confirmed_at:null},legacy),null);
+    assert.equal(await mappedProfile(db,alice),null);
+    const other={...user,id:bob,email:'bob@example.test',user_metadata:{email:'alice@example.test',email_verified:true}};
+    const id=await resolveAccountProfile(db,other,legacy);
+    assert.equal(id,`sb_${bob}`);assert.equal(await readRecipe(db,recipe.id,id!),null);
+    assert.equal(await resolveAccountProfile(db,{...other,email:'alice+other@example.test'},legacy),id);
+    assert.equal(await mappedProfile(db,alice),null);
+  }finally{sqlite.close();}
+});
+
+test('un’associazione automatica in conflitto non sposta ricette o identità esistenti',async()=>{
+  const {db,sqlite}=fixture();try{
+    await resolveProfile(db,alice);const recipe=await saveRecipe(db,`sb_${alice}`,examples[0]);
+    await assert.rejects(()=>resolveAccountProfile(db,user,{userId:'alice',email:'alice@example.test'}),/ricettario distinto/);
+    assert.equal(await mappedProfile(db,alice),`sb_${alice}`);
+    assert.equal((await readRecipe(db,recipe.id,`sb_${alice}`))?.ownerId,`sb_${alice}`);
+    assert.equal(await readRecipe(db,recipe.id,'alice'),null);
+  }finally{sqlite.close();}
+});
+
 test('cookie e header contraffatti non sono identità; il server Auth deve verificare l’utente',async()=>{
   const original=globalThis.fetch;let checks=0;
   globalThis.fetch=async()=>{checks++;return Response.json({message:'Invalid JWT'},{status:401});};
@@ -46,6 +84,28 @@ test('cookie e header contraffatti non sono identità; il server Auth deve verif
     assert.ok(checks>0);
     await withAccount(new Request('https://recipeek.test/api/me',{headers:{'oai-authenticated-user-id':'alice'}}),environment,async()=>{assert.equal(accountContext()?.user,null);return new Response();});
   }finally{globalThis.fetch=original;}
+});
+
+test('la transizione usa la stessa identità verificata per pagina e API anche prima del cambio modalità',async()=>{
+  const {db,sqlite}=fixture(),original=globalThis.fetch;
+  const legacy={userId:'alice',email:'alice@example.test'};
+  globalThis.fetch=async()=>Response.json(user);
+  try{
+    const recipe=await saveRecipe(db,'alice',examples[0]);
+    const request=new Request('https://recipeek.test/api/me',{headers:{cookie:cookie({access_token:token(alice),refresh_token:'r',expires_at:Date.now()/1000+3600,user})}});
+    await withAccount(request,{...environment,RECIPEEK_AUTH_MODE:'sites'},async()=>{
+      assert.equal(accountContext()?.attempted,true);
+      const id=await externalProfile(db,legacy);assert.equal(id,'alice');
+      assert.equal(await externalProfile(db,legacy),id);
+      assert.equal((await readRecipe(db,recipe.id,id!))?.id,recipe.id);
+      return new Response();
+    });
+    globalThis.fetch=async()=>Response.json({message:'Invalid JWT'},{status:401});
+    await withAccount(request,{...environment,RECIPEEK_AUTH_MODE:'sites'},async()=>{
+      assert.equal(accountContext()?.attempted,true);assert.equal(await externalProfile(db,legacy),null);
+      return new Response();
+    });
+  }finally{globalThis.fetch=original;sqlite.close();}
 });
 
 test('il refresh aggiorna cookie di richiesta e risposta senza condividere identità tra richieste',async()=>{
