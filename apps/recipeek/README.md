@@ -56,7 +56,7 @@ Non servono chiavi Gemini/Supadata per questa app. L’autenticazione del sito e
 
 ## Limiti da conoscere
 
-Questa è la prima versione web, non una build iOS/Android nativa. Accesso iniziale tramite ChatGPT; Apple/Google diretti e distribuzione negli store restano successivi. È necessaria una connessione per caricare il ricettario. Il manifesto web permette l’uso standalone nei browser compatibili, senza garantire funzionalità offline.
+Questa è la prima versione web, non una build iOS/Android nativa. Supabase Auth gestisce gli account Recipeek: Google è abilitato, email/password richiede la conferma dell'indirizzo e Apple non è ancora configurato. L'hosting resta privato con un gate ChatGPT separato; il riconoscimento del ricettario precedente e l'attivazione autonoma sono descritti in `AUTH-SETUP.md`. Serve ancora un servizio SMTP per la consegna delle email agli amici. È necessaria una connessione per caricare il ricettario. Il manifesto web permette l’uso standalone nei browser compatibili, senza garantire funzionalità offline.
 
 La sessione cooking conserva una copia della ricetta e i timer nel browser, sul dispositivo corrente. I timer si basano sull’orologio: possono riprendere il conteggio dopo una pausa, ma su iOS la pagina può essere sospesa e non garantisce avvisi a schermo spento. Non sostituire un timer di sicurezza con quello del browser. Per la sessione contano le dosi selezionate all’avvio; modificare successivamente la ricetta non riscrive la sessione in corso.
 
@@ -73,3 +73,5 @@ Fotografie illustrative da [Unsplash](https://unsplash.com/), distribuite come a
 Il controllo sicurezza del 17 ottobre 2026 è documentato nel [report](../../docs/security/2026-10-17-review.md). L’audit npm delle dipendenze di produzione è pulito; la catena di sviluppo ha ancora segnalazioni transitive documentate. Il conteggio npm non sostituisce l’analisi del bundle effettivamente pubblicato. Gli header del Worker impediscono il caching delle risposte personali e limitano referrer, oggetti incorporati e framing esterno.
 
 La checklist per la beta su dispositivi e account reali è in [docs/testing/beta-checklist.md](../../docs/testing/beta-checklist.md). Le bozze sono locali e non equivalgono a un backup o a una sincronizzazione; foto nuove mai salvate in una ricetta possono diventare eliminabili dopo 24 ore.
+
+Il [collaudo completo dei flussi](../../docs/testing/2026-10-17-full-flow.md) comprende anche trasferimento ZIP con foto fra due account reali temporanei, secondo ripristino senza duplicati e logout sincronizzato fra schede. `tests/live-auth-smoke.mjs` esegue le prove sul Worker locale, ricevendo le credenziali da stdin; non va eseguito contro il sito ospitato.

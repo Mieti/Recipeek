@@ -2,6 +2,8 @@
 
 La versione rimane privata. Non sono stati invitati altri account automaticamente. Questa checklist richiede dispositivi e account del proprietario/tester: una build riuscita non certifica queste prove.
 
+Ultimo giro completo: [17 ottobre 2026](2026-10-17-full-flow.md), con due account Supabase temporanei, cinque ricette, foto e ripristino ZIP fra account, più collaudo UI desktop. I controlli sui dispositivi reali e con due utenti dell'hosting restano distinti.
+
 ## Già verificato automaticamente
 
 - API con identità locale, autorizzazioni e isolamento in SQLite, body limitati, quote e concorrenza.
