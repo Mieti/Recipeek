@@ -8,6 +8,13 @@
       "when": 1792177898240,
       "tag": "0000_odd_midnight",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1792222423388,
+      "tag": "0001_bright_elektra",
+      "breakpoints": true
     }
   ]
 }

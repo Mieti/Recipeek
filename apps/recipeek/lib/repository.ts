@@ -28,7 +28,7 @@ export async function saveRecipe(db: Database, user: string, input: RecipeInput,
 export async function removeRecipe(db: Database, id: string, user: string) { const existing = await db.prepare('SELECT id FROM recipes WHERE id=? AND owner_id=?').bind(id,user).first(); if (!existing) return false; await db.batch([db.prepare('DELETE FROM recipe_ingredients WHERE recipe_id=?').bind(id),db.prepare('DELETE FROM recipes WHERE id=? AND owner_id=?').bind(id,user)]); return true; }
 
 export async function readableUpload(db: Database, id: string, user: string) {
-  const upload = await db.prepare('SELECT owner_id,content_type FROM uploads WHERE id=?').bind(id).first<{owner_id:string;content_type:string}>();
+  const upload = await db.prepare("SELECT owner_id,content_type FROM uploads WHERE id=? AND state='ready'").bind(id).first<{owner_id:string;content_type:string}>();
   if (!upload) return null;
   if (upload.owner_id === user) return upload;
   const path = `/api/media/${id}`;

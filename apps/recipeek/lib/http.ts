@@ -1,6 +1,7 @@
 export class HttpError extends Error {
   status: number;
-  constructor(status: number, message: string) { super(message); this.status = status; }
+  headers: Record<string,string>;
+  constructor(status: number, message: string, headers: Record<string,string> = {}) { super(message); this.status = status; this.headers = headers; }
 }
 
 // Count actual bytes while reading: Content-Length can be absent or misleading.

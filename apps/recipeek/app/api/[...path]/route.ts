@@ -4,10 +4,12 @@ import { getChatGPTUser } from '../../chatgpt-auth';
 import { recipeSchema } from '../../../lib/model';
 import { listRecipes, readRecipe, readableUpload, saveRecipe, removeRecipe } from '../../../lib/repository';
 import { HttpError, readLimitedBody, readJsonBody, assertSameOrigin } from '../../../lib/http';
+import { enforceRateLimit, cleanupUploads, storageUsage, storeUpload } from '../../../lib/media-storage';
+import { sanitizePhoto } from '../../../lib/photo';
 
 export const dynamic = 'force-dynamic';
 const json = (body: unknown, status = 200, headers: Record<string,string> = {}) => Response.json(body, {status, headers: {'cache-control':'private, no-store', 'x-content-type-options':'nosniff', ...headers}});
-const methods: Record<string, string[]> = {me:['GET','PATCH'],ingredients:['GET'],recipes:['GET','POST'],'recipes/id':['GET','PATCH','DELETE'],people:['GET'],'follow/id':['POST','DELETE'],media:['POST'],'media/id':['GET']};
+const methods: Record<string, string[]> = {me:['GET','PATCH'],ingredients:['GET'],recipes:['GET','POST'],'recipes/id':['GET','PATCH','DELETE'],people:['GET'],'follow/id':['POST','DELETE'],media:['POST'],'media/id':['GET'],storage:['GET','POST']};
 
 async function handle(req: Request) {
   try {
@@ -26,6 +28,7 @@ async function handle(req: Request) {
     }
     const db = env.DB;
     if (!db) return json({error:'Database non disponibile. Riprova tra poco.'},503);
+    await enforceRateLimit(db,user.userId,'api');
     await db.prepare('INSERT OR IGNORE INTO profiles (id,name,bio,discoverable,created_at) VALUES (?,?,?,?,?)').bind(user.userId,'Cuoco di casa','',0,new Date().toISOString()).run();
 
     if (resource === 'me') {
@@ -50,7 +53,7 @@ async function handle(req: Request) {
         if (id && !(await db.prepare('SELECT id FROM recipes WHERE id=? AND owner_id=?').bind(id,user.userId).first())) return json({error:'Ricetta non trovata.'},404);
         const mediaIds = [...new Set([value.recipe.image,...value.recipe.steps.map(s => s.image)].filter(v => v.startsWith('/api/media/')).map(v => v.split('/').at(-1)!))];
         if (mediaIds.length) {
-          const owned = await db.prepare('SELECT id FROM uploads WHERE owner_id=? AND id IN (SELECT value FROM json_each(?))').bind(user.userId,JSON.stringify(mediaIds)).all();
+          const owned = await db.prepare("SELECT id FROM uploads WHERE owner_id=? AND state='ready' AND id IN (SELECT value FROM json_each(?))").bind(user.userId,JSON.stringify(mediaIds)).all();
           if (owned.results.length !== mediaIds.length) return json({error:'Una foto non appartiene al tuo account. Caricala di nuovo.'},400);
         }
         return json(await saveRecipe(db,user.userId,value.recipe,id,value.updatedAt),id ? 200 : 201);
@@ -69,34 +72,41 @@ async function handle(req: Request) {
       } else await db.prepare('DELETE FROM follows WHERE follower_id=? AND followed_id=?').bind(user.userId,id).run();
       return json({following:req.method === 'POST'});
     }
+    if (resource === 'storage') {
+      if(req.method==='POST') {
+        if(!env.BUCKET)return json({error:'Archivio foto non disponibile.'},503);
+        const result=await cleanupUploads(db,env.BUCKET,user.userId);
+        return json({...await storageUsage(db,user.userId),...result});
+      }
+      return json(await storageUsage(db,user.userId));
+    }
     if (resource === 'media') {
       const bucket = env.BUCKET;
       if (!bucket) return json({error:'Archivio foto non disponibile.'},503);
       if (req.method === 'POST') {
+        await enforceRateLimit(db,user.userId,'upload');
         const type = req.headers.get('content-type') || '';
         if (!['image/jpeg','image/png','image/webp'].includes(type)) return json({error:'Usa una foto JPEG, PNG o WebP.'},400);
-        const data = await readLimitedBody(req,6_000_000);
-        if (data.byteLength < 12) return json({error:'Dimensione foto non valida.'},400);
-        const b = data;
-        const valid = type === 'image/jpeg' ? b[0]===255 && b[1]===216 && b[2]===255 : type === 'image/png' ? b[0]===137 && b[1]===80 && b[2]===78 && b[3]===71 : String.fromCharCode(...b.slice(0,4))==='RIFF' && String.fromCharCode(...b.slice(8,12))==='WEBP';
-        if (!valid) return json({error:'Il contenuto non corrisponde al formato della foto.'},400);
-        const uploadId = crypto.randomUUID();
-        await bucket.put(uploadId,data,{httpMetadata:{contentType:type}});
-        try { await db.prepare('INSERT INTO uploads (id,owner_id,name,content_type,created_at) VALUES (?,?,?,?,?)').bind(uploadId,user.userId,'Foto ricetta',type,new Date().toISOString()).run(); }
-        catch (e) { await bucket.delete(uploadId); throw e; }
-        return json({url:`/api/media/${uploadId}`},201);
+        const {data} = sanitizePhoto(await readLimitedBody(req,6_000_000),type);
+        await cleanupUploads(db,bucket,user.userId);
+        return json({url:await storeUpload(db,bucket,user.userId,data,type)},201);
       }
       if (id) {
         const upload = await readableUpload(db,id,user.userId);
         if (!upload) return json({error:'Foto non trovata.'},404);
         const object = await bucket.get(id);
         if (!object) return json({error:'Foto non trovata.'},404);
-        return new Response(object.body,{headers:{'content-type':upload.content_type,'cache-control':'private, no-store','x-content-type-options':'nosniff'}});
+        // Also protect previously uploaded photos: never send their original
+        // metadata to another viewer. Read through the same bounded sanitizer.
+        const {data} = sanitizePhoto(await readLimitedBody(new Request('https://media.internal',{method:'POST',body:object.body,duplex:'half'} as RequestInit),6_000_000),upload.content_type);
+        await db.prepare("UPDATE uploads SET byte_size=? WHERE id=? AND owner_id=? AND state='ready'").bind(object.size,id,upload.owner_id).run();
+        return new Response(data,{headers:{'content-type':upload.content_type,'cache-control':'private, no-store','x-content-type-options':'nosniff'}});
       }
     }
     return json({error:'Operazione non disponibile.'},404);
   } catch (error) {
-    if (error instanceof HttpError) return json({error:error.message},error.status);
+    if (error instanceof HttpError) return json({error:error.message},error.status,error.headers);
+    if (error instanceof Error && error.message.includes('INVALID_MEDIA')) return json({error:'Una foto non è più disponibile o non appartiene al tuo account. Caricala di nuovo.'},400);
     if (error instanceof z.ZodError) return json({error:error.issues.map(i => i.message).join('. ')},400);
     if (error instanceof Error && error.message === 'NOT_FOUND') return json({error:'La ricetta è stata eliminata. Le modifiche non sono state salvate.'},404);
     if (error instanceof Error && error.message === 'LIMIT_REACHED') return json({error:'Raggiunto il limite di 1.000 ricette. Esporta il ricettario e libera spazio prima di aggiungerne altre.'},409);

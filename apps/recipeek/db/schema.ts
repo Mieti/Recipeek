@@ -15,4 +15,7 @@ export const recipeIngredients = sqliteTable('recipe_ingredients', {
 export const follows = sqliteTable('follows', {
   followerId: text('follower_id').notNull().references(() => profiles.id), followedId: text('followed_id').notNull().references(() => profiles.id),
 }, table => [primaryKey({columns: [table.followerId, table.followedId]})]);
-export const uploads = sqliteTable('uploads', { id: text('id').primaryKey(), ownerId: text('owner_id').notNull().references(() => profiles.id), name: text('name').notNull(), contentType: text('content_type').notNull(), createdAt: text('created_at').notNull() });
+export const uploads = sqliteTable('uploads', { id: text('id').primaryKey(), ownerId: text('owner_id').notNull().references(() => profiles.id), name: text('name').notNull(), contentType: text('content_type').notNull(), createdAt: text('created_at').notNull(), byteSize: integer('byte_size').notNull().default(6000000), state: text('state').notNull().default('ready'), lastUsedAt: text('last_used_at') });
+export const requestLimits = sqliteTable('request_limits', {
+  ownerId: text('owner_id').notNull(), scope: text('scope').notNull(), windowStart: integer('window_start').notNull(), expiresAt: integer('expires_at').notNull(), hits: integer('hits').notNull(),
+}, table => [primaryKey({columns:[table.ownerId,table.scope,table.windowStart]})]);

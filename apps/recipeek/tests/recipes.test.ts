@@ -1,19 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { DatabaseSync } from 'node:sqlite';
-import { readFileSync } from 'node:fs';
+import { fixture } from './database.ts';
 import { recipeSchema, scalingFactor, formatQuantity, filterRecipes } from '../lib/model.ts';
 import { saveRecipe, readRecipe, listRecipes, removeRecipe, readableUpload, type Database } from '../lib/repository.ts';
 import { examples } from '../lib/examples.ts';
 
-function fixture(){
-  const sqlite = new DatabaseSync(':memory:');
-  sqlite.exec(readFileSync(new URL('../drizzle/0000_odd_midnight.sql',import.meta.url),'utf8'));
-  sqlite.exec("INSERT INTO profiles (id,name,created_at) VALUES ('alice','Alice','2026'),('bob','Bob','2026')");
-  function prepare(sql:string,params:unknown[]=[]):unknown { return {bind:(...values:unknown[])=>prepare(sql,values),first:async()=>sqlite.prepare(sql).get(...params as [])??null,all:async()=>({results:sqlite.prepare(sql).all(...params as [])}),run:async()=>{const result=sqlite.prepare(sql).run(...params as []);return {meta:{changes:Number(result.changes)}};}}; }
-  const db = {prepare,batch:async(statements:{run:()=>Promise<unknown>}[])=>{sqlite.exec('BEGIN');try{const result=[];for(const s of statements)result.push(await s.run());sqlite.exec('COMMIT');return result;}catch(e){sqlite.exec('ROLLBACK');throw e;}}} as unknown as Database;
-  return {db,sqlite};
-}
+
 test('le ricette private sono isolate e quelle condivise sono leggibili senza permesso di modifica',async()=>{const {db,sqlite}=fixture();try{const privateRecipe=await saveRecipe(db,'alice',examples[0]);assert.equal(await readRecipe(db,privateRecipe.id,'bob'),null);assert.equal((await listRecipes(db,'bob')).length,0);assert.equal((await listRecipes(db,'bob','community')).length,0);await assert.rejects(()=>saveRecipe(db,'bob',examples[0],privateRecipe.id,privateRecipe.updatedAt),/FORBIDDEN/);assert.equal(await removeRecipe(db,privateRecipe.id,'bob'),false);const shared=await saveRecipe(db,'alice',{...examples[0],visibility:'shared'},privateRecipe.id,privateRecipe.updatedAt);assert.equal((await readRecipe(db,shared.id,'bob'))?.title,shared.title);assert.equal((await listRecipes(db,'bob','community')).length,1);}finally{sqlite.close();}});
 test('modificare una ricetta aggiorna anche l’anagrafica e un documento obsoleto non sovrascrive i dati',async()=>{const {db,sqlite}=fixture();try{const original=await saveRecipe(db,'alice',examples[0]);const changed=await saveRecipe(db,'alice',{...original,title:'Pasta nuova',ingredients:[{...original.ingredients[0],name:'Pasta integrale'}],steps:[{...original.steps[0],ingredients:[{ingredientId:'i1',quantity:50}]}]},original.id,original.updatedAt);await assert.rejects(()=>saveRecipe(db,'alice',original,original.id,original.updatedAt),/CONFLICT/);assert.equal((await readRecipe(db,changed.id,'alice'))?.title,'Pasta nuova');assert.equal((sqlite.prepare('SELECT count(*) AS n FROM recipe_ingredients WHERE recipe_id=?').get(original.id) as {n:number}).n,1);assert.equal(await removeRecipe(db,original.id,'alice'),true);assert.equal(await readRecipe(db,original.id,'alice'),null);assert.equal((sqlite.prepare('SELECT count(*) AS n FROM recipe_ingredients').get() as {n:number}).n,0);}finally{sqlite.close();}});
 test('il confronto della revisione impedisce aggiornamenti concorrenti e conserva l’indice ingredienti',async()=>{const {db,sqlite}=fixture();try{const original=await saveRecipe(db,'alice',examples[0]);const realBatch=db.batch.bind(db);let raced=false;const racing={...db,batch:async(statements:Parameters<Database['batch']>[0])=>{if(!raced){raced=true;await saveRecipe(db,'alice',{...original,title:'Vince altra finestra'},original.id,original.updatedAt);}return realBatch(statements);}} as Database;await assert.rejects(()=>saveRecipe(racing,'alice',{...original,title:'Documento vecchio'},original.id,original.updatedAt),/CONFLICT/);assert.equal((await readRecipe(db,original.id,'alice'))?.title,'Vince altra finestra');assert.equal((sqlite.prepare('SELECT count(*) AS n FROM recipe_ingredients').get() as {n:number}).n,original.ingredients.length);}finally{sqlite.close();}});

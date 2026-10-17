@@ -19,7 +19,7 @@ Il flusso manuale è indipendente dall’AI. Il laboratorio di importazione rima
 - La UI può essere aggiunta alla schermata Home come collegamento web. Questa versione richiede connessione; non promette sincronizzazione offline, notifiche timer in background o distribuzione TestFlight/App Store.
 - Il login iniziale è ChatGPT tramite Sites. Apple/Google diretti, un’eventuale app Expo/React Native e la portabilità del backend sono lavoro successivo, non funzioni già attive.
 - Per pubblicazione e runtime ci sono dipendenze da Sites, Vinext, D1 e R2. L’esportazione JSON delle ricette è inclusa; le foto vanno gestite separatamente.
-- Un limite di 1.000 ricette per elenco e 6 MB per foto mantiene circoscritta la prima versione. Prima di ampliare il pubblico servono paginazione, quote/storage cleanup, moderazione e ulteriori verifiche su dispositivi reali.
+- Un limite di 1.000 ricette per elenco e 6 MB per foto mantiene circoscritta la prima versione. Le quote foto e la pulizia sono state introdotte con ADR 0002. Prima di ampliare il pubblico servono paginazione, moderazione e ulteriori verifiche su dispositivi reali.
 
 ## Alternative considerate
 
