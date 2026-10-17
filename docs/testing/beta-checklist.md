@@ -10,14 +10,19 @@ La versione rimane privata. Non sono stati invitati altri account automaticament
 - Bozze incomplete e storage assente/pieno, separazione fra account.
 - Archivio con foto collegate a più passaggi, integrità e rifiuto di file troncati/ostili.
 - Ripristino ripetuto senza duplicare né sovrascrivere modifiche personali; vecchi JSON supportati.
+- Unità di cucina, alias, singolare/plurale e conservazione delle unità precedenti.
+- Geometria del viewport e del campo attivo; navigazione laterale con esclusione di scroll, pressioni prolungate e controlli.
 
 ## Da eseguire su iPhone/iPad
 
 - [ ] Aprire il sito e accedere, sia da Safari sia dal collegamento sulla schermata Home.
 - [ ] Scrivere parte di una ricetta, cambiare sezione, chiudere/riaprire la pagina e riprendere la bozza.
+- [ ] Aprire la tastiera su titolo, ultimo ingrediente, quantità e procedimento: campo attivo visibile, pannello scorrevole, footer non sovrapposto. Ripetere in orizzontale, su Safari e dalla Home; chiudere la tastiera e verificare il ritorno all’altezza completa.
+- [ ] Scegliere cucchiaino, cucchiaio e scoop dal menu; salvare, riaprire e ricalcolare le dosi. Verificare una ricetta precedente con unità personalizzata.
 - [ ] Provare JPEG/PNG/WebP, orientamento verticale e file vicino a 6 MB. HEIC richiede conversione.
 - [ ] Completare e salvare una ricetta: la relativa bozza deve sparire.
 - [ ] Avviare cooking, cambiare dosi, usare due timer, sospendere/riprendere la pagina e controllare i risultati. Gli avvisi a schermo spento non sono garantiti.
+- [ ] In cooking toccare i lati per cambiare step, scorrere un procedimento lungo e usare timer/video: solo i tap laterali devono navigare. Il primo/ultimo passaggio non devono uscire dai limiti; l’ultimo richiede «Ho finito». Controllare anche VoiceOver e dimensione testo aumentata.
 - [ ] Spostare una ricetta di prova nel cestino, ripristinarla e controllare immagini, ingredienti e visibilità privata.
 - [ ] Scaricare un backup ZIP, individuarlo in File, ripristinarlo due volte e verificare il conteggio delle ricette.
 - [ ] Provare più parti di backup; simulare un’interruzione del ripristino e ripetere la stessa parte.
