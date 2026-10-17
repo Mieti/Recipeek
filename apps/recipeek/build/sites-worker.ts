@@ -2,6 +2,7 @@ import handler from "vinext/server/fetch-handler";
 import { runWithConnectorBinding } from "../lib/connector-context";
 import type { ConnectorBinding } from "../lib/connector-contract.mjs";
 import { secureResponse } from "../lib/security-headers";
+import {withAccount} from '../lib/auth-context';
 
 export default {
   async fetch(request: Request, env: Cloudflare.Env, ctx: ExecutionContext<{ CONNECTORS?: ConnectorBinding }>) {
@@ -24,7 +25,7 @@ export default {
         },
       };
     }
-    const response = await runWithConnectorBinding(binding, () => handler.fetch(request, env, ctx));
+    const response = await withAccount(request,env,updated=>runWithConnectorBinding(binding, () => handler.fetch(updated, env, ctx)));
     return secureResponse(request, response);
   },
 };

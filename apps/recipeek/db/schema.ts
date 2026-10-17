@@ -19,3 +19,8 @@ export const uploads = sqliteTable('uploads', { id: text('id').primaryKey(), own
 export const requestLimits = sqliteTable('request_limits', {
   ownerId: text('owner_id').notNull(), scope: text('scope').notNull(), windowStart: integer('window_start').notNull(), expiresAt: integer('expires_at').notNull(), hits: integer('hits').notNull(),
 }, table => [primaryKey({columns:[table.ownerId,table.scope,table.windowStart]})]);
+export const externalIdentities = sqliteTable('external_identities', {
+  authUserId:text('auth_user_id').primaryKey(),
+  profileId:text('profile_id').notNull().unique().references(()=>profiles.id),
+  createdAt:text('created_at').notNull(),
+});

@@ -12,6 +12,15 @@ La versione rimane privata. Non sono stati invitati altri account automaticament
 - Ripristino ripetuto senza duplicare né sovrascrivere modifiche personali; vecchi JSON supportati.
 - Unità di cucina, alias, singolare/plurale e conservazione delle unità precedenti.
 - Geometria del viewport e del campo attivo; navigazione laterale con esclusione di scroll, pressioni prolungate e controlli.
+- Due account temporanei reali Supabase e cinque ricette sul Worker locale; isolamento, follow, backup e cestino. Dettaglio/cooking delle cinque ricette verificati anche nel browser desktop. Report: [account](2026-10-17-accounts.md).
+
+## Attivazione account autonomi
+
+- [ ] Configurare Custom SMTP e verificare consegna conferma, recupero password e cambio email su due caselle autorizzate.
+- [ ] Registrare l’account del proprietario e collegare esplicitamente il ricettario esistente; controllare ricette/foto dopo il passaggio.
+- [ ] Configurare e collaudare i provider desiderati, comprese callback, rifiuto del consenso e associazione delle identità.
+- [ ] Passare alla modalità Supabase e verificare richieste anonime/contraffatte, rinnovo sessione e cambio account su due schede.
+- [ ] Dopo il collaudo, autorizzare l’eventuale modifica del pubblico dell’hosting per rendere raggiungibile il login senza il gate ChatGPT.
 
 ## Da eseguire su iPhone/iPad
 
