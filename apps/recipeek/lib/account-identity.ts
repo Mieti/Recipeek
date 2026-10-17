@@ -1,14 +1,18 @@
 import type {Database} from './repository.ts';
 import {HttpError} from './http.ts';
-import {confirmedIdentity} from './auth-config.ts';
+import {confirmedIdentity,type LegacyAccount} from './auth-config.ts';
 
 export type LegacyIdentity={userId:string;email:string};
 type AuthIdentity={id:string;email?:string;email_confirmed_at?:string|null};
 
 // Inputs come exclusively from the verified Auth user and the trusted Sites
 // gateway. Never match email addresses taken from form data or user metadata.
-export async function resolveAccountProfile(db:Database,user:AuthIdentity|null,legacy:LegacyIdentity|null=null,displayName='Cuoco di casa'){
+export async function resolveAccountProfile(db:Database,user:AuthIdentity|null,legacy:LegacyIdentity|null=null,displayName='Cuoco di casa',configured:LegacyAccount|null=null){
   const identity=confirmedIdentity(user);if(!identity)return null;
+  if(configured&&identity.id===configured.authId){
+    if(!await db.prepare('SELECT 1 FROM profiles WHERE id=?').bind(configured.profileId).first())throw new HttpError(503,'Il ricettario precedente non è disponibile. Contatta l’assistenza.');
+    return linkLegacyProfile(db,identity.id,configured.profileId);
+  }
   if(legacy&&identity.email.trim().toLowerCase()===legacy.email.trim().toLowerCase())return linkLegacyProfile(db,identity.id,legacy.userId);
   return resolveProfile(db,identity.id,displayName);
 }

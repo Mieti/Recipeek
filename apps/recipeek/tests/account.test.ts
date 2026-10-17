@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {fixture} from './database.ts';
-import {authConfig,authMode,confirmedIdentity,safeAuthReturn} from '../lib/auth-config.ts';
+import {authConfig,authMode,confirmedIdentity,safeAuthReturn,legacyAccount} from '../lib/auth-config.ts';
 import {linkLegacyProfile,mappedProfile,resolveAccountProfile,resolveProfile} from '../lib/account-identity.ts';
 import {withAccount,accountContext,externalProfile} from '../lib/auth-context.ts';
 import {examples} from '../lib/examples.ts';
@@ -9,6 +9,25 @@ import {saveRecipe,readRecipe} from '../lib/repository.ts';
 const alice='11111111-1111-4111-8111-111111111111',bob='22222222-2222-4222-8222-222222222222';
 const environment={RECIPEEK_AUTH_MODE:'supabase',SUPABASE_URL:'https://project.supabase.co',SUPABASE_PUBLISHABLE_KEY:'sb_publishable_test'};
 const user={id:alice,email:'alice@example.test',email_confirmed_at:'2026-10-17T00:00:00Z',aud:'authenticated',role:'authenticated',app_metadata:{},user_metadata:{},created_at:'2026-10-17T00:00:00Z'};
+
+test('il passaggio all’accesso pubblico conserva il ricettario solo per l’UUID verificato configurato dal proprietario',async()=>{
+  const {db,sqlite}=fixture();try{
+    const configured=legacyAccount({RECIPEEK_LEGACY_AUTH_ID:alice,RECIPEEK_LEGACY_PROFILE_ID:'alice'});
+    assert.equal(legacyAccount({}),null);
+    assert.throws(()=>legacyAccount({RECIPEEK_LEGACY_AUTH_ID:alice}));
+    assert.throws(()=>legacyAccount({RECIPEEK_LEGACY_AUTH_ID:'fake',RECIPEEK_LEGACY_PROFILE_ID:'alice'}));
+    const recipe=await saveRecipe(db,'alice',examples[0]);
+    assert.equal(await resolveAccountProfile(db,{...user,email_confirmed_at:null},null,'Alice',configured),null);
+    assert.equal(await mappedProfile(db,alice),null);
+    assert.equal(await resolveAccountProfile(db,{...user,id:bob,user_metadata:{id:alice}} as typeof user,null,'Bob',configured),`sb_${bob}`);
+    assert.equal(await readRecipe(db,recipe.id,`sb_${bob}`),null);
+    assert.equal(await resolveAccountProfile(db,user,null,'Alice',configured),'alice');
+    assert.equal(await resolveAccountProfile(db,{...user,email:'changed@example.test'},null,'Alice',configured),'alice');
+    assert.equal((await readRecipe(db,recipe.id,'alice'))?.title,recipe.title);
+    await assert.rejects(()=>resolveAccountProfile(db,user,null,'Alice',{authId:alice,profileId:'missing'}),/non è disponibile/);
+    await assert.rejects(()=>resolveAccountProfile(db,{...user,id:bob},null,'Bob',{authId:bob,profileId:'alice'}),/ricettario distinto/);
+  }finally{sqlite.close();}
+});
 function cookie(session:Record<string,unknown>){return `sb-project-auth-token=base64-${Buffer.from(JSON.stringify(session)).toString('base64url')}`;}
 function token(sub:string,exp=Math.floor(Date.now()/1000)+3600){return `${Buffer.from(JSON.stringify({alg:'HS256',typ:'JWT'})).toString('base64url')}.${Buffer.from(JSON.stringify({sub,exp})).toString('base64url')}.signature`;}
 
@@ -103,6 +122,12 @@ test('la transizione usa la stessa identità verificata per pagina e API anche p
     globalThis.fetch=async()=>Response.json({message:'Invalid JWT'},{status:401});
     await withAccount(request,{...environment,RECIPEEK_AUTH_MODE:'sites'},async()=>{
       assert.equal(accountContext()?.attempted,true);assert.equal(await externalProfile(db,legacy),null);
+      return new Response();
+    });
+    globalThis.fetch=async()=>Response.json(user);
+    await withAccount(request,{...environment,RECIPEEK_LEGACY_AUTH_ID:alice,RECIPEEK_LEGACY_PROFILE_ID:'alice'},async()=>{
+      assert.equal(accountContext()?.mode,'supabase');
+      assert.equal(await externalProfile(db,null),'alice');
       return new Response();
     });
   }finally{globalThis.fetch=original;sqlite.close();}

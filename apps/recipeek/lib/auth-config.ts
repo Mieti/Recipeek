@@ -1,4 +1,12 @@
-export type AuthEnvironment={RECIPEEK_AUTH_MODE?:string;SUPABASE_URL?:string;SUPABASE_PUBLISHABLE_KEY?:string};
+export type AuthEnvironment={RECIPEEK_AUTH_MODE?:string;SUPABASE_URL?:string;SUPABASE_PUBLISHABLE_KEY?:string;RECIPEEK_LEGACY_AUTH_ID?:string;RECIPEEK_LEGACY_PROFILE_ID?:string};
+export type LegacyAccount={authId:string;profileId:string};
+// Operator-supplied migration binding. These IDs never come from browser data.
+export function legacyAccount(env:AuthEnvironment):LegacyAccount|null{
+  const authId=env.RECIPEEK_LEGACY_AUTH_ID,profileId=env.RECIPEEK_LEGACY_PROFILE_ID;
+  if(!authId&&!profileId)return null;
+  if(!authId||!profileId||!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(authId)||!/^[a-zA-Z0-9_-]{1,200}$/.test(profileId))throw new Error('Associazione del ricettario precedente non valida');
+  return {authId,profileId};
+}
 export type AuthConfig={url:string;key:string};
 export const socialProviders=[{id:'google',name:'Google'},{id:'apple',name:'Apple'},{id:'azure',name:'Microsoft'}] as const;
 export function authConfig(env:AuthEnvironment):AuthConfig|null{

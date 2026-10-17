@@ -1,5 +1,7 @@
 # Attivazione account autonomi
 
+**Aggiornamento 17 ottobre:** la landing pubblica e la modalità Supabase sono adottate nell'[ADR 0007](../../docs/adr/0007-landing-pubblica.md). Google è il metodo per creare nuovi account durante la preparazione SMTP. `RECIPEEK_EMAIL_DELIVERY_READY=false` nasconde registrazione e recupero email; abilitarla e ripubblicare solo dopo il collaudo della consegna. La coppia runtime `RECIPEEK_LEGACY_AUTH_ID` / `RECIPEEK_LEGACY_PROFILE_ID`, verificata dall'operatore, conserva il catalogo del proprietario anche senza sessione ChatGPT. I passaggi di transizione sotto rimangono come riferimento storico.
+
 Il progetto Supabase **Recipeek**, `ybrxvbxjmxnxgbupxblj`, è già stato creato sul piano Free, regione Francoforte. Dashboard: https://supabase.com/dashboard/project/ybrxvbxjmxnxgbupxblj/auth/providers
 
 URL e chiave publishable sono configurati nel runtime Sites. `RECIPEEK_AUTH_MODE=sites` conserva l’accesso precedente solo in assenza di un tentativo di sessione Supabase; una sessione Supabase presente viene verificata e usata anche nelle API. `supabase` richiede sempre l’identità Auth verificata. Mai inserire service_role, chiavi `sb_secret_` o il token di gestione Supabase nel frontend, nel manifest o nelle variabili dell’app. La password Postgres è stata generata casualmente durante la creazione e non è usata dall’app; se in futuro serve una connessione diretta, reimpostarla dal dashboard.

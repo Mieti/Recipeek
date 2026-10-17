@@ -17,6 +17,8 @@ const sessions=[];
 async function request(who,path,method='GET',value,type='application/json'){const jar=sessions[who]?.jar??new Map();const response=await fetch(`${origin}/api/${path}`,{method,headers:{cookie:[...jar].map(([n,v])=>`${n}=${encodeURIComponent(v)}`).join('; '),origin,...(value?{'content-type':type}:{})},body:value?(type==='application/json'?JSON.stringify(value):value):undefined});for(const line of response.headers.getSetCookie()){const pair=line.split(';')[0],at=pair.indexOf('='),name=pair.slice(0,at);if(/max-age=0/i.test(line))jar.delete(name);else jar.set(name,decodeURIComponent(pair.slice(at+1)));}return response;}
 async function json(who,path,method='GET',value){const r=await request(who,path,method,value);assert.ok(r.ok,`${path} ${r.status}: ${await r.clone().text()}`);return r.json();}
 try{
+ const landing=await fetch(origin+'/',{redirect:'manual'});assert.equal(landing.status,200);const landingHtml=await landing.text();assert.ok(landingHtml.includes('Entra nella tua cucina'));assert.ok(!landingHtml.includes('signin-with-chatgpt'));
+ const rejectedGateway=await fetch(origin+'/api/recipes',{headers:{cookie:'__sites_local_auth=1','oai-authenticated-user-id':'forged'}});assert.equal(rejectedGateway.status,401,'Autonomous mode must reject a gateway-only identity');
  for(let i=0;i<2;i++){
   const email=`${prefix}-${i}@example.invalid`,password=randomBytes(32).toString('base64url');
   const {data,error}=await admin.auth.admin.createUser({email,password,email_confirm:true});if(error)throw error;createdUsers.push(data.user.id);
