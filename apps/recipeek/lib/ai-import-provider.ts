@@ -21,7 +21,8 @@ Ingredienti id i1,i2, passaggi s1,s2. Collega solo ingredienti realmente usati. 
 Suggerimenti FACOLTATIVI separati: massimo 5, id p1,p2; target id ingrediente per quantity, id passaggio per text, recipe per servings/prepMinutes/cookMinutes. value è stringa (numero senza unità per valori numerici), reason spiega che è una proposta e la sua base. Proponi solo integrazioni ragionevoli, mai dosi critiche prive di base, garanzie sanitarie, tempi sicuri di conservazione o identificazione di funghi. Non sostituire dati chiari della fonte. Se non puoi proporre responsabilmente lascia suggestions vuoto.`;
 
 export async function providerJson(url:string,init:RequestInit,fetcher:typeof fetch=fetch){
-  const response=await fetcher(url,{...init,redirect:'error',signal:AbortSignal.timeout(20000)});
+  // Workers reject redirect:'error'; manual keeps provider requests on the exact host.
+  const response=await fetcher(url,{...init,redirect:'manual',signal:AbortSignal.timeout(20000)});
   if(!response.ok&&response.status!==206){
     const retry=response.headers.get('retry-after'),seconds=retry===null?NaN:Number(retry);
     const retryAt=Number.isFinite(seconds)?Date.now()+Math.max(1,seconds)*1000:retry?Date.parse(retry):0;

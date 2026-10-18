@@ -7,6 +7,7 @@ import {formatIngredientQuantity} from '../lib/model.ts';
 import {handleApi} from '../lib/api-handler.ts';
 import {handleAiImport,advanceImport,processImportJob,type ImportJob} from '../lib/ai-import-service.ts';
 import {extractedSchema,needsMore,validateExtraction,publicImportUrl,recipeFromExtraction,applySuggestion,type Extraction} from '../lib/ai-import-model.ts';
+import {providerJson,ProviderError} from '../lib/ai-import-provider.ts';
 
 const text='Pasta: 200 g pasta. Cuoci la pasta. Per 2 persone. Preparazione 5 minuti. Cottura 10 minuti.';
 const ev=(quote:string)=>({sourceId:'text-1',quote});
@@ -17,6 +18,13 @@ async function processResponse(db:ReturnType<typeof fixture>['db'],id:string,own
 const testEnv={GEMINI_API_KEY:'test-only',SUPADATA_API_KEY:'test-only'};
 const env={GEMINI_API_KEY:'test-only',SUPADATA_API_KEY:'test-only'};
 const request=(body?:unknown)=>new Request('https://recipeek.test/api/ai-imports',{method:body?'POST':'GET',headers:{'content-type':'application/json'},body:body?JSON.stringify(body):undefined});
+
+test('provider requests use Workers-compatible manual redirects and reject relocation',async()=>{
+  let redirect:RequestRedirect|undefined;
+  const fetcher=(async(_url:RequestInfo|URL,init?:RequestInit)=>{redirect=init?.redirect;return new Response(null,{status:302,headers:{location:'https://other.example/'}});}) as typeof fetch;
+  await assert.rejects(()=>providerJson('https://api.supadata.ai/v1/metadata',{method:'GET'},fetcher),e=>e instanceof ProviderError&&e.providerStatus===302);
+  assert.equal(redirect,'manual');
+});
 
 test('complete text stops; suggestions never fill the evidence gap; invalid links and prompt-injection sources remain data',()=>{
   assert.equal(needsMore(draft(),sources),false);
