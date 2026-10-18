@@ -88,7 +88,8 @@ test('serving and time evidence verifies values and hour conversions without buy
   const warnings=validateExtraction(changed,source).warnings;assert.ok(warnings.some(w=>w.startsWith('Porzioni: valore')));assert.ok(warnings.some(w=>w.startsWith('Cottura: valore')));assert.equal(needsMore(changed,source),false);
   assert.ok(minutesInQuote('1 ora e 30 minuti').includes(90));assert.ok(minutesInQuote('mezza ora').includes(30));assert.ok(minutesInQuote('90 secondi').includes(1.5));assert.deepEqual(minutesInQuote('forno a 180 gradi'),[]);
   const schema=extractionJsonSchema as any;assert.equal(schema.properties.ingredients.items.properties.quantity.minimum,0);assert.ok(schema.properties.ingredients.items.properties.id.description.includes('i'));
-  assert.equal(schema.properties.ingredients.maxItems,80);assert.equal(schema.properties.suggestions.maxItems,5);
+  assert.equal(schema.properties.ingredients.maxItems,undefined);assert.equal(schema.properties.suggestions.maxItems,undefined);
+  assert.equal(schema.properties.ingredients.description,'At most 80 items.');assert.equal(schema.properties.suggestions.description,'At most 5 items.');
 });
 
 test('saved source photos can be released without touching recipe media; initial validation does not buffer photos',async()=>{

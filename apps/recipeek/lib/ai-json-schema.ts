@@ -18,7 +18,12 @@ export function extractionSchemaJson(schema:z.ZodTypeAny):Record<string,unknown>
     for(const check of schema._def.checks){if(check.kind==='int')result.type='integer';if(check.kind==='min'){result.minimum=check.value;if(!check.inclusive)result.description=`Strictly greater than ${check.value}`;}if(check.kind==='max')result.maximum=check.value;}
     return result;
   }
-  if(schema instanceof z.ZodArray)return {type:'array',items:extractionSchemaJson(schema.element),...(schema._def.minLength?{minItems:schema._def.minLength.value}:{}),...(schema._def.maxLength?{maxItems:schema._def.maxLength.value}:{})};
+  if(schema instanceof z.ZodArray){
+    // The provider rejects this full recipe schema when maxItems constraints are
+    // included. Keep the limits as guidance; Zod enforces them on receipt.
+    const limit=schema._def.maxLength?.value;
+    return {type:'array',items:extractionSchemaJson(schema.element),...(schema._def.minLength?{minItems:schema._def.minLength.value}:{}),...(limit?{description:`At most ${limit} items.`}:{})};
+  }
   if(schema instanceof z.ZodObject){const shape=schema.shape as Record<string,z.ZodTypeAny>;return {type:'object',properties:Object.fromEntries(Object.entries(shape).map(([key,value])=>[key,extractionSchemaJson(value)])),required:Object.keys(shape),additionalProperties:false};}
   throw new Error('Unsupported extraction schema type');
 }
