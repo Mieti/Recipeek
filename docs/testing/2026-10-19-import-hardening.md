@@ -36,6 +36,26 @@ Le 16 prove testuali usano 0,031693 USD stimati; link, integrazione e foto altre
 
 Browser locale con account Supabase temporaneo e fixture derivate dai risultati reali: confronto espandibile, applicazione dell'integrazione e riapertura con titolo/quantità/note personali e tre passaggi conservati. Viewport 390×844 senza overflow orizzontale. Il database locale aveva bisogno della migrazione budget già presente in produzione; allineato prima della verifica del monitor.
 
+Monitor verificato anche a 768×1024, senza overflow. Prove visive locali conservate in `.local/proofs/import-supplement-mobile.png` e `.local/proofs/import-monitor-mobile.png`. Il monitor locale ha HTTP 200; per un account non amministratore l'API restituisce HTTP 403 e per visitatori anonimi la pagina pubblicata rimanda al login. La sessione Google del proprietario non era disponibile nel browser di collaudo: la visualizzazione del monitor con il suo account in produzione non è stata simulata o impersonata. L'abilitazione amministrativa usa il profilo associato all'UUID verificato del proprietario letto dalla tabella `external_identities`.
+
+## Collaudo dopo la pubblicazione
+
+Versione Sites **20**, sorgente `ba1e0a532bad9c7c3442e75fceef31eebb817b00`, ambiente revisione **5**. Deploy `appgdep_6ad5505d6f108191abf29f60840e6416`, esito `succeeded`, sito pubblico invariato: https://recipeek.muddydace3.chatgpt.site.
+
+[CI del commit applicativo bedb707 riuscita](https://github.com/Mieti/Recipeek/actions/runs/39174958392). La versione 19 intermedia è stata salvata senza distribuzione; la produzione passa dalla 18 alla 20.
+
+Due account Supabase reali temporanei, verificati amministrativamente senza inviare email:
+
+- Testo con soli ingredienti: `partial_recipe`, 3 ingredienti e 0 passaggi, 766 token input / 431 output. Integrazione, conservazione di titolo/note/dose manuale, decisioni delle proposte e salvataggio privato riusciti.
+- Secondo account: HTTP 404 su import, ricetta privata e tentativo di integrazione del primo account. Monitor aggregato negato HTTP 403 al non amministratore.
+- Video musicale YouTube: `not_recipe`, ingredienti/passaggi vuoti, 1451 token input / 144 output, un credito Supadata. Tentativo di salvataggio con payload di ricetta completo respinto HTTP 400.
+- Ricetta di test eliminata, import non salvati scartati e entrambi gli account rimossi. Registro dei consumi e storico operativo conservati; catalogo del proprietario intatto.
+- Guida `/install` verificata nel browser di produzione. Icone Apple/192/512 e manifest rispondono HTTP 200 con i tipi corretti.
+
+Supadata `/v1/me` al termine: **Free (100/mo), 16 crediti utilizzati su 100**, quindi 84 rimanenti. All'inizio di questo giro erano 10: sei crediti complessivi aggiuntivi fra prove isolate e produzione. Nessun acquisto o ricarica.
+
+Supabase verificato: Google abilitato, conferma email obbligatoria, SMTP personalizzato assente. Account e fixture locali rimossi, configurazione amministrativa temporanea locale rimossa, viewport ripristinato e server di anteprima fermato.
+
 ## Limiti esterni
 
 - iPhone/iPad fisici: fotocamera, tastiera virtuale, aggiunta alla Home e ritorno OAuth dal contesto installato restano da verificare sui dispositivi. Il browser mobile desktop non li certifica.
