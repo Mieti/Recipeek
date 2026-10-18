@@ -43,3 +43,11 @@ Fonti ufficiali per verificare il contratto corrente: [Gemini Structured Outputs
 Le chiavi sono state attivate in produzione il 18 ottobre 2026. Le prime prove reali di testo, pagina web e YouTube, i consumi e i limiti ancora da verificare sono documentati nel [collaudo iniziale](testing/2026-10-18-first-live-imports.md). I test automatici restano indipendenti dalle chiavi e dalle API esterne.
 
 Il [collaudo social e foto del 19 ottobre](testing/2026-10-19-social-photo-imports.md) copre anche i link Instagram/TikTok forniti dal proprietario, una pagina fotografica di prova e guardrail con Gemini reale. Un risultato parziale resta incompleto se descrizione e trascrizione non contengono il procedimento: il video visivo rimane disattivato.
+
+## Integrazioni e monitor
+
+Da una bozza pronta, “Completa con altro materiale” permette di aggiungere testo o foto della stessa ricetta. La nuova analisi viene mostrata separatamente: occorre integrare o scartare i risultati. Le correzioni manuali e un procedimento già presente restano conservati. Massimo tre integrazioni per bozza, quattro foto complessive; ogni integrazione conta nelle quote giornaliere e nei budget esistenti.
+
+`RECIPEEK_IMPORT_ADMIN_PROFILES` contiene soltanto ID profilo Recipeek, separati da virgole, autorizzati a leggere `/import/monitor`. Va configurata nel runtime server, mai da metadati modificabili dell'utente. Senza questa variabile nessun account può leggere il monitor. In produzione è stato abilitato il solo profilo del proprietario.
+
+Il [collaudo esteso](testing/2026-10-19-import-hardening.md) documenta 20 fonti con provider reali, blocco dei contenuti non culinari, integrazione e limiti delle prove mobile. Per installare sulla Home è disponibile `/install`.

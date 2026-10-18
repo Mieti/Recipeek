@@ -60,4 +60,5 @@ test('dimensioni teglia e URL non validi sono rifiutati prima del ricalcolo o de
 test('le pagine private non ereditano cache pubblica e i link esterni non ricevono il referrer',()=>{
   const response=secureResponse(new Request('https://site.test/'),new Response('private',{headers:{'cache-control':'public, max-age=3600'}}));
   assert.equal(response.headers.get('cache-control'),'private, no-store');assert.equal(response.headers.get('referrer-policy'),'no-referrer');assert.match(response.headers.get('content-security-policy')!,/object-src 'none'/);
+  assert.equal(secureResponse(new Request('https://site.test/import/monitor'),new Response('private',{headers:{'cache-control':'public'}})).headers.get('cache-control'),'private, no-store');
 });

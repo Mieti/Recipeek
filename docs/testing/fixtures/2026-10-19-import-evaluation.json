@@ -1,0 +1,414 @@
+{
+  "environment": "isolated SQLite and in-memory bucket with real providers",
+  "estimatedGeminiUsd": 0.05719,
+  "videoEnabled": false,
+  "urlsAndPhoto": {
+    "results": [
+      {
+        "label": "nonfood-video",
+        "passed": true,
+        "status": "ready",
+        "classification": "not_recipe",
+        "ingredients": 0,
+        "steps": 0,
+        "credits": 1,
+        "usage": [
+          {
+            "model": "gemini-3.8-flash",
+            "input": 1451,
+            "output": 148,
+            "thought": 0,
+            "outcome": "completed"
+          }
+        ],
+        "seconds": 6
+      },
+      {
+        "label": "user-tiktok",
+        "passed": true,
+        "status": "ready",
+        "classification": "recipe",
+        "ingredients": 9,
+        "steps": 6,
+        "credits": 2,
+        "usage": [
+          {
+            "model": "gemini-3.8-flash",
+            "input": 1191,
+            "output": 1690,
+            "thought": 0,
+            "outcome": "completed"
+          }
+        ],
+        "seconds": 19
+      },
+      {
+        "label": "user-instagram",
+        "passed": true,
+        "status": "ready",
+        "classification": "partial_recipe",
+        "ingredients": 9,
+        "steps": 0,
+        "credits": null,
+        "usage": [
+          {
+            "model": "gemini-3.8-flash",
+            "input": 846,
+            "output": 1071,
+            "thought": 0,
+            "outcome": "completed"
+          }
+        ],
+        "seconds": 13
+      }
+    ],
+    "budget": [
+      {
+        "provider": "gemini",
+        "charge": 25497,
+        "known": 5,
+        "calls": 5
+      },
+      {
+        "provider": "supadata",
+        "charge": 5,
+        "known": 4,
+        "calls": 5
+      }
+    ]
+  },
+  "text": {
+    "results": [
+      {
+        "label": "pasta",
+        "expected": "recipe",
+        "passed": true,
+        "status": "ready",
+        "classification": "recipe",
+        "ingredients": 3,
+        "steps": 3,
+        "warnings": 0,
+        "seconds": 5,
+        "usage": [
+          {
+            "model": "gemini-3.8-flash",
+            "input": 792,
+            "output": 710,
+            "thought": 0,
+            "outcome": "completed"
+          }
+        ]
+      },
+      {
+        "label": "frittata",
+        "expected": "recipe",
+        "passed": true,
+        "status": "ready",
+        "classification": "recipe",
+        "ingredients": 3,
+        "steps": 2,
+        "warnings": 3,
+        "seconds": 5,
+        "usage": [
+          {
+            "model": "gemini-3.8-flash",
+            "input": 777,
+            "output": 729,
+            "thought": 0,
+            "outcome": "completed"
+          }
+        ]
+      },
+      {
+        "label": "insalata",
+        "expected": "recipe",
+        "passed": true,
+        "status": "ready",
+        "classification": "recipe",
+        "ingredients": 3,
+        "steps": 2,
+        "warnings": 3,
+        "seconds": 4,
+        "usage": [
+          {
+            "model": "gemini-3.8-flash",
+            "input": 770,
+            "output": 603,
+            "thought": 0,
+            "outcome": "completed"
+          }
+        ]
+      },
+      {
+        "label": "bevanda",
+        "expected": "recipe",
+        "passed": true,
+        "status": "ready",
+        "classification": "recipe",
+        "ingredients": 3,
+        "steps": 2,
+        "warnings": 4,
+        "seconds": 4,
+        "usage": [
+          {
+            "model": "gemini-3.8-flash",
+            "input": 789,
+            "output": 648,
+            "thought": 0,
+            "outcome": "completed"
+          }
+        ]
+      },
+      {
+        "label": "pane",
+        "expected": "recipe",
+        "passed": true,
+        "status": "ready",
+        "classification": "recipe",
+        "ingredients": 4,
+        "steps": 3,
+        "warnings": 1,
+        "seconds": 5,
+        "usage": [
+          {
+            "model": "gemini-3.8-flash",
+            "input": 790,
+            "output": 791,
+            "thought": 0,
+            "outcome": "completed"
+          }
+        ]
+      },
+      {
+        "label": "english",
+        "expected": "recipe",
+        "passed": true,
+        "status": "ready",
+        "classification": "recipe",
+        "ingredients": 3,
+        "steps": 3,
+        "warnings": 4,
+        "seconds": 6,
+        "usage": [
+          {
+            "model": "gemini-3.8-flash",
+            "input": 771,
+            "output": 658,
+            "thought": 0,
+            "outcome": "completed"
+          }
+        ]
+      },
+      {
+        "label": "sport",
+        "expected": "blocked",
+        "passed": true,
+        "status": "ready",
+        "classification": "not_recipe",
+        "ingredients": 0,
+        "steps": 0,
+        "warnings": 0,
+        "seconds": 2,
+        "usage": [
+          {
+            "model": "gemini-3.8-flash",
+            "input": 776,
+            "output": 113,
+            "thought": 0,
+            "outcome": "completed"
+          }
+        ]
+      },
+      {
+        "label": "software",
+        "expected": "blocked",
+        "passed": true,
+        "status": "ready",
+        "classification": "not_recipe",
+        "ingredients": 0,
+        "steps": 0,
+        "warnings": 0,
+        "seconds": 2,
+        "usage": [
+          {
+            "model": "gemini-3.8-flash",
+            "input": 764,
+            "output": 133,
+            "thought": 0,
+            "outcome": "completed"
+          }
+        ]
+      },
+      {
+        "label": "ristorante",
+        "expected": "blocked",
+        "passed": true,
+        "status": "ready",
+        "classification": "not_recipe",
+        "ingredients": 0,
+        "steps": 0,
+        "warnings": 0,
+        "seconds": 2,
+        "usage": [
+          {
+            "model": "gemini-3.8-flash",
+            "input": 763,
+            "output": 136,
+            "thought": 0,
+            "outcome": "completed"
+          }
+        ]
+      },
+      {
+        "label": "cosmetico",
+        "expected": "blocked",
+        "passed": true,
+        "status": "ready",
+        "classification": "not_recipe",
+        "ingredients": 0,
+        "steps": 0,
+        "warnings": 0,
+        "seconds": 2,
+        "usage": [
+          {
+            "model": "gemini-3.8-flash",
+            "input": 767,
+            "output": 137,
+            "thought": 0,
+            "outcome": "completed"
+          }
+        ]
+      },
+      {
+        "label": "detergente",
+        "expected": "blocked",
+        "passed": true,
+        "status": "ready",
+        "classification": "not_recipe",
+        "ingredients": 0,
+        "steps": 0,
+        "warnings": 0,
+        "seconds": 2,
+        "usage": [
+          {
+            "model": "gemini-3.8-flash",
+            "input": 759,
+            "output": 147,
+            "thought": 0,
+            "outcome": "completed"
+          }
+        ]
+      },
+      {
+        "label": "dieta",
+        "expected": "blocked",
+        "passed": true,
+        "status": "ready",
+        "classification": "not_recipe",
+        "ingredients": 0,
+        "steps": 0,
+        "warnings": 3,
+        "seconds": 2,
+        "usage": [
+          {
+            "model": "gemini-3.8-flash",
+            "input": 774,
+            "output": 170,
+            "thought": 0,
+            "outcome": "completed"
+          }
+        ]
+      },
+      {
+        "label": "injection-only",
+        "expected": "blocked",
+        "passed": true,
+        "status": "ready",
+        "classification": "not_recipe",
+        "ingredients": 0,
+        "steps": 0,
+        "warnings": 0,
+        "seconds": 3,
+        "usage": [
+          {
+            "model": "gemini-3.8-flash",
+            "input": 772,
+            "output": 147,
+            "thought": 0,
+            "outcome": "completed"
+          }
+        ]
+      },
+      {
+        "label": "solo-titolo",
+        "expected": "blocked",
+        "passed": true,
+        "status": "ready",
+        "classification": "insufficient_content",
+        "ingredients": 0,
+        "steps": 0,
+        "warnings": 5,
+        "seconds": 2,
+        "usage": [
+          {
+            "model": "gemini-3.8-flash",
+            "input": 744,
+            "output": 168,
+            "thought": 0,
+            "outcome": "completed"
+          }
+        ]
+      },
+      {
+        "label": "multi",
+        "expected": "blocked",
+        "passed": true,
+        "status": "ready",
+        "classification": "insufficient_content",
+        "ingredients": 0,
+        "steps": 0,
+        "warnings": 5,
+        "seconds": 3,
+        "usage": [
+          {
+            "model": "gemini-3.8-flash",
+            "input": 802,
+            "output": 217,
+            "thought": 0,
+            "outcome": "completed"
+          }
+        ]
+      },
+      {
+        "label": "injection-recipe",
+        "expected": "recipe",
+        "passed": true,
+        "status": "ready",
+        "classification": "recipe",
+        "ingredients": 2,
+        "steps": 1,
+        "warnings": 5,
+        "seconds": 4,
+        "usage": [
+          {
+            "model": "gemini-3.8-flash",
+            "input": 795,
+            "output": 462,
+            "thought": 0,
+            "outcome": "completed"
+          }
+        ]
+      }
+    ],
+    "budget": [
+      {
+        "provider": "gemini",
+        "charge": 31693,
+        "known": 16,
+        "calls": 16
+      }
+    ],
+    "failures": 0
+  },
+  "date": "2026-10-19"
+}

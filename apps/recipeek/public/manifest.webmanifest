@@ -1,1 +1,30 @@
-{"name":"Recipeek · Il tuo ricettario","short_name":"Recipeek","lang":"it","start_url":"/","scope":"/","display":"standalone","background_color":"#faf9f6","theme_color":"#244c3b","icons":[{"src":"/favicon.svg","sizes":"any","type":"image/svg+xml","purpose":"any"}]}
+{
+  "name": "Recipeek · Il tuo ricettario",
+  "short_name": "Recipeek",
+  "lang": "it",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#faf9f6",
+  "theme_color": "#244c3b",
+  "icons": [
+    {
+      "type": "image/png",
+      "src": "/icon-192.png",
+      "purpose": "any",
+      "sizes": "192x192"
+    },
+    {
+      "type": "image/png",
+      "src": "/icon-512.png",
+      "purpose": "any",
+      "sizes": "512x512"
+    },
+    {
+      "type": "image/svg+xml",
+      "src": "/favicon.svg",
+      "purpose": "any",
+      "sizes": "any"
+    }
+  ]
+}

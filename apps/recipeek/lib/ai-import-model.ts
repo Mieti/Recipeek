@@ -2,7 +2,7 @@ import {z} from 'zod';
 import {recipeSchema, type RecipeInput} from './model.ts';
 import {canonicalUnit} from './units.ts';
 
-export const sourceSchema=z.object({id:z.string().max(80),kind:z.enum(['text','caption','transcript','web','photo','video']),text:z.string().max(24000),label:z.string().max(200)});
+export const sourceSchema=z.object({id:z.string().max(80),kind:z.enum(['text','caption','transcript','web','photo','video']),text:z.string().max(24000),label:z.string().max(200),photoPath:z.string().optional()});
 export type ImportSource=z.infer<typeof sourceSchema>;
 const evidence=z.object({sourceId:z.string().max(80),quote:z.string().max(1000)}).strict();
 export const extractedSchema=z.object({
@@ -16,6 +16,24 @@ export const extractedSchema=z.object({
   suggestions:z.array(z.object({id:z.string().regex(/^p\d+$/),target:z.string().max(80),field:z.enum(['quantity','text','servings','prepMinutes','cookMinutes']),value:z.string().max(2000),reason:z.string().max(500)}).strict()).max(15),
 }).strict();
 export type Extraction=z.infer<typeof extractedSchema>;
+// Semantic classification is performed by the model; this independent gate prevents
+// an unsupported or structurally inconsistent answer from becoming a savable draft.
+export function guardExtraction(d:Extraction,sources:ImportSource[]):Extraction{
+  const result=structuredClone(d);
+  const grounded=(e:{sourceId:string;quote:string})=>{const s=sources.find(s=>s.id===e.sourceId);return !!s&&!!e.quote.trim()&&(['photo','video'].includes(s.kind)||norm(s.text.replace(/^\[\d+(?:\.\d+)?s\][ \t]*/gm,'')).includes(norm(e.quote.replace(/^\[\d+(?:\.\d+)?s\][ \t]*/gm,''))));};
+  const ids=new Set(d.ingredients.map(i=>i.id));
+  const consistent=ids.size===d.ingredients.length&&new Set(d.steps.map(s=>s.id)).size===d.steps.length&&new Set(d.suggestions.map(s=>s.id)).size===d.suggestions.length&&d.steps.every(s=>s.ingredientIds.every(id=>ids.has(id)))&&d.suggestions.every(s=>s.field==='quantity'?ids.has(s.target):s.field==='text'?d.steps.some(step=>step.id===s.target):s.target==='recipe');
+  if(['recipe','partial_recipe'].includes(d.classification)){
+    const ingredient=d.ingredients.some(i=>grounded(i.evidence)),step=d.steps.some(s=>grounded(s.evidence));
+    if(!consistent||!ingredient&&!step){result.classification='insufficient_content';result.missing=['La risposta non è sufficientemente sostenuta dalle fonti o contiene riferimenti incoerenti.'];}
+    else if(!ingredient||!step||!d.title.trim())result.classification='partial_recipe';
+  }
+  if(!['recipe','partial_recipe'].includes(result.classification)){
+    result.title='';result.description='';result.ingredients=[];result.steps=[];result.suggestions=[];
+    result.servings=result.prepMinutes=result.cookMinutes=null;result.servingsEvidence=result.prepEvidence=result.cookEvidence=null;result.needsVisual=false;
+  }
+  return result;
+}
 export type ImportInput={kind:'text'|'url'|'photos';text?:string;url?:string;photos?:string[]};
 const recipeFields=recipeSchema.innerType();
 export const importReviewSchema=recipeFields.extend({

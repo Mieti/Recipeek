@@ -8,6 +8,7 @@ const unreferenced = `uploads.id NOT IN (
  SELECT substr(json_extract(document,'$.image'),12) FROM recipes WHERE owner_id=? AND json_extract(document,'$.image') LIKE '/api/media/%'
  UNION SELECT substr(json_extract(s.value,'$.image'),12) FROM recipes r,json_each(r.document,'$.steps') s WHERE r.owner_id=? AND json_extract(s.value,'$.image') LIKE '/api/media/%'
  UNION SELECT substr(p.value,12) FROM ai_imports a,json_each(a.document,'$.input.photos') p WHERE a.owner_id=uploads.owner_id AND a.status<>'discarded' AND p.value LIKE '/api/media/%'
+ UNION SELECT substr(json_extract(s.value,'$.photoPath'),12) FROM ai_imports a,json_each(a.document,'$.sources') s WHERE a.owner_id=uploads.owner_id AND a.status<>'discarded' AND json_extract(s.value,'$.photoPath') LIKE '/api/media/%'
 )`;
 
 // Fixed UTC windows live in D1, not in an individual Worker isolate.

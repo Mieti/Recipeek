@@ -8,6 +8,7 @@ function configured(raw:string|undefined,fallback:number,max:number){
   const value=Number(raw);if(value>max)throw new HttpError(503,'Configurazione del budget importazioni non valida.');return value;
 }
 export function aiAllowed(env:ImportEnv,owner:string){const ids=env.RECIPEEK_AI_ALLOWED_PROFILES?.split(',').map(s=>s.trim()).filter(Boolean);return !ids?.length||ids.includes(owner);}
+export function importBudgetLimits(env:ImportEnv){return {gemini:configured(env.RECIPEEK_AI_MONTHLY_BUDGET_USD,5,1000),supadata:Math.floor(configured(env.RECIPEEK_SUPADATA_MONTHLY_CREDITS,100,100000))};}
 export async function reserveImportBudget(db:Database,id:string,job:string,owner:string,provider:'gemini'|'supadata',stage:string,env:ImportEnv,photos=true){
   const month=new Date().toISOString().slice(0,7),created=new Date().toISOString();
   // Unknown outcomes keep a conservative reservation. This is separate from the provider invoice.

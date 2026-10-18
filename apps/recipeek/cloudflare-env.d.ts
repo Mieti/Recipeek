@@ -8,6 +8,7 @@ declare namespace Cloudflare {
     RECIPEEK_AI_MONTHLY_BUDGET_USD?:string;
     RECIPEEK_SUPADATA_MONTHLY_CREDITS?:string;
     RECIPEEK_AI_ALLOWED_PROFILES?:string;
+    RECIPEEK_IMPORT_ADMIN_PROFILES?:string;
     BUCKET?: R2Bucket;
     RECIPEEK_AUTH_MODE?: 'sites'|'supabase';
     SUPABASE_URL?: string;
