@@ -35,7 +35,10 @@ export function publicImportUrl(raw:string){
   u.hash='';return u;
 }
 export function socialUrl(url:string){const h=new URL(url).hostname;return ['instagram.com','tiktok.com','youtube.com','youtu.be'].some(d=>h===d||h.endsWith('.'+d));}
-const norm=(s:string)=>s.normalize('NFKC').toLowerCase().replace(/\s+/g,' ').trim();
+const norm=(s:string)=>s.normalize('NFKC')
+  .replace(/(\*\*|__)(?=\S)([^\n]*?\S)\1/g,'$2')
+  .replace(/(?<![\p{L}\p{N}])([*_])(?=\S)([^\n]*?\S)\1(?![\p{L}\p{N}])/gu,'$2')
+  .toLowerCase().replace(/\s+/g,' ').trim();
 export function evidenceNumbers(text:string){
   const fractions:Record<string,string>={'½':'1/2','¼':'1/4','¾':'3/4','⅓':'1/3','⅔':'2/3','⅛':'1/8','⅜':'3/8','⅝':'5/8','⅞':'7/8'};
   const expanded=text.replace(/(\d)([½¼¾⅓⅔⅛⅜⅝⅞])/g,'$1 $2').replace(/[½¼¾⅓⅔⅛⅜⅝⅞]/g,c=>fractions[c]).normalize('NFKC').replaceAll('⁄','/');
@@ -79,12 +82,12 @@ export function validateExtraction(d:Extraction,sources:ImportSource[]){
 }
 export function minutesInQuote(text:string){
   const value=norm(text).replaceAll(',','.');
-  const matches=[...value.matchAll(/(\d+(?:\.\d+)?|mezza?|un(?:a|o)?|due|tre|quattro|cinque|dieci|quindici|venti|trenta|quaranta|sessanta)\s*(or[ae]\b|hours?\b|h\b|minut[oi]\b|minutes?\b|min\b|second[oi]\b|seconds?\b|sec\b)/g)];
+  const matches=[...value.matchAll(/(\d+(?:\.\d+)?|mezza?|un(?:a|o)?|due|tre|quattro|cinque|dieci|quindici|venti|trenta|quaranta|sessanta)\s*(or[ae]\b|hours?\b|h\b|minut[oi]\b|minutes?\b|mins?\b|second[oi]\b|seconds?\b|secs?\b)/g)];
   const words:Record<string,number>={mezzo:.5,mezza:.5,un:1,uno:1,una:1,due:2,tre:3,quattro:4,cinque:5,dieci:10,quindici:15,venti:20,trenta:30,quaranta:40,sessanta:60};
   const parts=matches.map(m=>(words[m[1]]??Number(m[1]))*(/^(or|h)/.test(m[2])?60:/^(sec)/.test(m[2])?1/60:1));
   if(!parts.length)return []; // A bare number is not evidence of minutes.
   const result=[...parts];
-  if(parts.length>1&&/\d[^\n,;]*\b(?:or[ae]|hours?|h)\b[^\n,;]*\b(?:minut[oi]|minutes?|min)\b/.test(value))result.push(parts.reduce((a,b)=>a+b,0));
+  if(parts.length>1&&/\d[^\n,;]*\b(?:or[ae]|hours?|h)\b[^\n,;]*\b(?:minut[oi]|minutes?|mins?)\b/.test(value))result.push(parts.reduce((a,b)=>a+b,0));
   if(/(?:ora|hour)\s+e\s+mezza/.test(value))result.push(90);
   return result;
 }

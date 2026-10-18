@@ -92,6 +92,14 @@ test('serving and time evidence verifies values and hour conversions without buy
   assert.equal(schema.properties.ingredients.description,'At most 80 items.');assert.equal(schema.properties.suggestions.description,'At most 5 items.');
 });
 
+test('web evidence ignores Markdown emphasis and understands English minute abbreviations',()=>{
+  const d=structuredClone(draft);d.prepEvidence=ev('Preparazione 5 mins');d.cookEvidence=ev('Cottura 10 mins');
+  const source=text.replace('Cuoci la pasta.','_Cuoci la pasta._').replace('Preparazione 5 minuti','Preparazione **5 mins**').replace('Cottura 10 minuti','Cottura **10 mins**');
+  assert.deepEqual(validateExtraction(d,[{id:'text-1',kind:'web',text:source,label:'Pagina'}]).warnings,[]);
+  assert.ok(minutesInQuote('1 hour 30 mins').includes(90));
+  d.prepMinutes=50;assert.ok(validateExtraction(d,[{id:'text-1',kind:'web',text:source,label:'Pagina'}]).warnings.some(w=>w.startsWith('Preparazione: valore')));
+});
+
 test('saved source photos can be released without touching recipe media; initial validation does not buffer photos',async()=>{
   const {db,sqlite}=fixture();try{
     sqlite.prepare("INSERT INTO uploads (id,owner_id,name,content_type,created_at,byte_size,state) VALUES ('source-photo','alice','Pagina','image/jpeg','2026-01-01',5,'ready')").run();
