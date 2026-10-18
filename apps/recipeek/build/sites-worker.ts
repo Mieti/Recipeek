@@ -3,9 +3,12 @@ import { runWithConnectorBinding } from "../lib/connector-context";
 import type { ConnectorBinding } from "../lib/connector-contract.mjs";
 import { secureResponse } from "../lib/security-headers";
 import {withAccount} from '../lib/auth-context';
+import {handleImportQueue,queuePath,runImportQueue} from '../lib/ai-import-queue';
 
 export default {
   async fetch(request: Request, env: Cloudflare.Env, ctx: ExecutionContext<{ CONNECTORS?: ConnectorBinding }>) {
+    const path=new URL(request.url).pathname;
+    if(path===queuePath)return secureResponse(request,await handleImportQueue(request,env.DB,env,env.BUCKET));
     let binding = ctx.props?.CONNECTORS;
     // Local preview emulates the same request-scoped capability. This branch and
     // the auxiliary service binding are absent from production builds.
@@ -26,6 +29,7 @@ export default {
       };
     }
     const response = await withAccount(request,env,updated=>runWithConnectorBinding(binding, () => handler.fetch(updated, env, ctx)));
+    if(env.DB&&env.RECIPEEK_IMPORT_QUEUE_TOKEN&&request.method==='POST'&&path.startsWith('/api/ai-imports')&&response.ok)ctx.waitUntil(runImportQueue(env.DB,env,env.BUCKET).catch(()=>{console.error('Import queue kickoff failed');}));
     return secureResponse(request, response);
   },
 };

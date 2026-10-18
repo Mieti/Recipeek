@@ -4,6 +4,7 @@ declare namespace Cloudflare {
     GEMINI_API_KEY?:string;
     SUPADATA_API_KEY?:string;
     RECIPEEK_IMPORT_VIDEO?:string;
+    RECIPEEK_IMPORT_QUEUE_TOKEN?:string;
     BUCKET?: R2Bucket;
     RECIPEEK_AUTH_MODE?: 'sites'|'supabase';
     SUPABASE_URL?: string;

@@ -10,6 +10,16 @@ L’interfaccia è `/import`, raggiungibile da “Importa con AI” nel ricettar
 4. In produzione configurarle come variabili **segrete** Sites. Una nuova distribuzione applica la revisione dell’ambiente. Non inserirle nel manifest, nei sorgenti, negli argomenti shell o in chat.
 5. Lasciare `RECIPEEK_IMPORT_VIDEO=false` durante i primi test. Abilitarlo solo dopo aver verificato Supadata Extract e i suoi costi; l’app limita i video alla durata nota di tre minuti.
 
+## Coda cloud
+
+La coda è persistente in D1. Il processo cloud `recipeek-import-queue` su Supabase richiama il Worker ogni minuto anche a browser chiuso. Il token interno `RECIPEEK_IMPORT_QUEUE_TOKEN` è un segreto generato per il servizio, distinto dalle chiavi Gemini e Supadata: non deve essere fornito agli utenti o inserito nel client.
+
+Il ricettario non viene salvato automaticamente dall’AI: al termine dell’elaborazione rimane una bozza da revisionare. Il richiamo periodico non sostituisce Gemini/Supadata e non può generare ricette finché le relative chiavi mancano.
+
+Per verificare lo scheduler: controllare in Supabase Cron il job `recipeek-import-queue`, il suo stato attivo e gli esiti HTTP in `net._http_response`. Il heartbeat della coda è restituito dalla configurazione dell’importazione soltanto agli utenti autenticati. Evitare di stampare header, Vault o valori dei segreti.
+
+In locale il richiamo cloud punta esclusivamente alla produzione. Per provare le fasi locali, configurare un token locale distinto in `.dev.vars` e richiamare POST `http://127.0.0.1:5173/internal/import-queue` con il relativo bearer; ogni richiamo elabora al massimo una fase per due lavori. I test automatici non richiedono chiavi reali.
+
 Fonti ufficiali per verificare il contratto corrente: [Gemini Structured Outputs](https://ai.google.dev/gemini-api/docs/structured-output), [Supadata API](https://docs.supadata.ai/api-reference/introduction), [Supadata OpenAPI](https://docs.supadata.ai/api-reference/v1-openapi.json).
 
 ## Verifica prima dell’attivazione per gli amici

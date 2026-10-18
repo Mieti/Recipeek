@@ -1,10 +1,11 @@
 import {test} from 'node:test';
+import {readFileSync} from 'node:fs';
 import assert from 'node:assert/strict';
 import {fixture} from './database.ts';
 import {cleanupUploads} from '../lib/media-storage.ts';
 import {formatIngredientQuantity} from '../lib/model.ts';
 import {handleApi} from '../lib/api-handler.ts';
-import {handleAiImport,advanceImport,type ImportJob} from '../lib/ai-import-service.ts';
+import {handleAiImport,advanceImport,processImportJob,type ImportJob} from '../lib/ai-import-service.ts';
 import {extractedSchema,needsMore,validateExtraction,publicImportUrl,recipeFromExtraction,applySuggestion,type Extraction} from '../lib/ai-import-model.ts';
 
 const text='Pasta: 200 g pasta. Cuoci la pasta. Per 2 persone. Preparazione 5 minuti. Cottura 10 minuti.';
@@ -12,6 +13,8 @@ const ev=(quote:string)=>({sourceId:'text-1',quote});
 function draft():Extraction{return extractedSchema.parse({classification:'recipe',title:'Pasta semplice',description:'Pasta',servings:2,prepMinutes:5,cookMinutes:10,servingsEvidence:ev('Per 2 persone'),prepEvidence:ev('Preparazione 5 minuti'),cookEvidence:ev('Cottura 10 minuti'),ingredients:[{id:'i1',name:'pasta',quantity:200,unit:'g',originalText:'200 g pasta',evidence:ev('200 g pasta')}],steps:[{id:'s1',text:'Cuoci la pasta.',ingredientIds:['i1'],evidence:ev('Cuoci la pasta.')}],missing:[],conflicts:[],needsVisual:false,suggestions:[]});}
 const sources=[{id:'text-1',kind:'text' as const,text,label:'Testo'}];
 const fakeModel=(d=draft())=>(async()=>Response.json({status:'completed',steps:[{type:'model_output',content:[{type:'text',text:JSON.stringify(d)}]}],usage:{total_input_tokens:300,total_output_tokens:200,total_thought_tokens:0}})) as typeof fetch;
+async function processResponse(db:ReturnType<typeof fixture>['db'],id:string,owner:string,env:typeof testEnv,fetcher:typeof fetch){const result=await processImportJob(db,id,owner,env,undefined,fetcher);return Response.json(result.job,{status:result.processed?200:202});}
+const testEnv={GEMINI_API_KEY:'test-only',SUPADATA_API_KEY:'test-only'};
 const env={GEMINI_API_KEY:'test-only',SUPADATA_API_KEY:'test-only'};
 const request=(body?:unknown)=>new Request('https://recipeek.test/api/ai-imports',{method:body?'POST':'GET',headers:{'content-type':'application/json'},body:body?JSON.stringify(body):undefined});
 
@@ -36,7 +39,7 @@ test('text-only workflow: five recipes, persistent review, isolation, explicit s
       const created=await handleAiImport(request({kind:'text',text:text+` Test ${n}`}),undefined,db,'alice',env);let j=await created.json() as ImportJob;
       const duplicate=await (await handleAiImport(request({kind:'text',text:text+` Test ${n}`}),undefined,db,'alice',env)).json() as ImportJob;assert.equal(j.id,duplicate.id);
       await assert.rejects(()=>handleAiImport(request(),j.id,db,'bob',env),/non trovata/);
-      j=await (await handleAiImport(request({action:'advance'}),j.id,db,'alice',env,undefined,fakeModel(d))).json() as ImportJob;assert.equal(j.status,'ready');assert.equal(j.usage.length,1);
+      j=await (await processResponse(db,j.id,'alice',env,fakeModel(d))).json() as ImportJob;assert.equal(j.status,'ready');assert.equal(j.usage.length,1);
       let recipe=recipeFromExtraction(d);const decisions=n===0?[{id:'p1',status:'accepted',value:'3'}]:[];
       if(n===0){await assert.rejects(()=>handleAiImport(request({action:'save',recipe,decisions,revision:j.reviewRevision,reviewed:true,servingsConfirmed:true}),j.id,db,'alice',env),/campo suggerito/);recipe=applySuggestion(recipe,d.suggestions[0],'3');}
       await handleAiImport(request({action:'review',recipe,decisions,revision:j.reviewRevision}),j.id,db,'alice',env);
@@ -59,7 +62,7 @@ test('caption first: no transcript request for complete content; native transcri
     j=await advanceImport(j,env,db,undefined,'alice',fetcher);assert.equal(j.status,'analyze');
     j=await advanceImport(j,env,db,undefined,'alice',fetcher);assert.equal(j.status,'ready');assert.equal(calls.length,2);assert.ok(calls.every(u=>!u.includes('transcript')));
     d.needsVisual=true;j.status='analyze';j=await advanceImport(j,env,db,undefined,'alice',fetcher);assert.equal(j.status,'transcript');
-    let mode='';await advanceImport(j,env,db,undefined,'alice',(async(url:RequestInfo|URL)=>{mode=new URL(String(url)).searchParams.get('mode')??'';return Response.json({content:'200 g pasta'});}) as typeof fetch);assert.equal(mode,'native');assert.equal(j.status,'analyzeTranscript');
+    let mode='';await advanceImport(j,env,db,undefined,'alice',(async(url:RequestInfo|URL)=>{mode=new URL(String(url)).searchParams.get('mode')??'';return Response.json({content:'Aggiungi basilico fresco alla fine.'});}) as typeof fetch);assert.equal(mode,'native');assert.equal(j.status,'analyzeTranscript');
   }finally{sqlite.close();}
 });
 
@@ -71,9 +74,9 @@ test('quotas, missing configuration, duplicate locks and unknown outcome prevent
     const j=await (await handleAiImport(request({kind:'text',text:text+'0'}),undefined,db,'alice',env)).json() as ImportJob;
     sqlite.prepare('UPDATE ai_imports SET lease=?,lease_until=? WHERE id=?').run('test',Date.now()+10000,j.id);
     let calls=0;const fetcher=(async()=>{calls++;throw new Error('never');}) as typeof fetch;
-    assert.equal((await handleAiImport(request({action:'advance'}),j.id,db,'alice',env,undefined,fetcher)).status,202);assert.equal(calls,0);
+    assert.equal((await processResponse(db,j.id,'alice',env,fetcher)).status,202);assert.equal(calls,0);
     sqlite.prepare('UPDATE ai_imports SET lease_until=0 WHERE id=?').run(j.id);
-    const failed=await (await handleAiImport(request({action:'advance'}),j.id,db,'alice',env,undefined,fetcher)).json() as ImportJob;assert.equal(failed.status,'failed');assert.equal(calls,0);
+    const failed=await (await processResponse(db,j.id,'alice',env,fetcher)).json() as ImportJob;assert.equal(failed.status,'failed');assert.equal(calls,0);
   }finally{sqlite.close();}
 });
 
@@ -96,7 +99,7 @@ test('AI imports enforce origin, media ownership and schema',async()=>{
     await assert.rejects(()=>handleAiImport(request({kind:'photos',photos:['/api/media/not-owned']}),undefined,db,'alice',env,{} as R2Bucket),/non appartiene/);
     let j=await (await handleAiImport(request({kind:'text',text}),undefined,db,'alice',env)).json() as ImportJob;
     const broken=(async()=>Response.json({status:'completed',steps:[{type:'model_output',content:[{type:'text',text:'{"title":"bad"}'}]}]})) as typeof fetch;
-    j=await (await handleAiImport(request({action:'advance'}),j.id,db,'alice',env,undefined,broken)).json() as ImportJob;assert.equal(j.status,'failed');assert.equal(sqlite.prepare('SELECT count(*) AS n FROM recipes').get()?.n,0);
+    j=await (await processResponse(db,j.id,'alice',env,broken)).json() as ImportJob;assert.equal(j.status,'failed');assert.equal(sqlite.prepare('SELECT count(*) AS n FROM recipes').get()?.n,0);
     assert.ok(j.error?.includes('formato'));
   }finally{sqlite.close();}
 });
@@ -104,7 +107,8 @@ test('AI imports enforce origin, media ownership and schema',async()=>{
 test('photo sources stay private and survive cleanup until the import is discarded',async()=>{
   const {db,sqlite}=fixture();try{
     sqlite.prepare("INSERT INTO uploads (id,owner_id,name,content_type,created_at,byte_size,state) VALUES ('source-photo','alice','Pagina','image/jpeg','2026-01-01',5,'ready')").run();
-    const bucket={get:async()=>({size:5,arrayBuffer:async()=>new Uint8Array([255,216,255,0,0]).buffer}),delete:async()=>{}} as unknown as R2Bucket;
+    const bytes=new Uint8Array(readFileSync(new URL('./fixtures/photo.jpeg',import.meta.url)));
+    const bucket={get:async()=>({size:bytes.length,arrayBuffer:async()=>bytes.buffer}),delete:async()=>{}} as unknown as R2Bucket;
     const j=await (await handleAiImport(request({kind:'photos',photos:['/api/media/source-photo']}),undefined,db,'alice',env,bucket)).json() as ImportJob;
     assert.equal((await cleanupUploads(db,bucket,'alice',Date.now()+48*3600_000)).removed,0);
     await assert.rejects(()=>handleAiImport(request({kind:'photos',photos:['/api/media/source-photo']}),undefined,db,'bob',env,bucket),/non appartiene/);

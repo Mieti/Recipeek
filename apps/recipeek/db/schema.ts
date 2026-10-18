@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, primaryKey } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, primaryKey, index } from 'drizzle-orm/sqlite-core';
 
 export const profiles = sqliteTable('profiles', {
   id: text('id').primaryKey(), name: text('name').notNull(), bio: text('bio').notNull().default(''), discoverable: integer('discoverable').notNull().default(0), createdAt: text('created_at').notNull(),
@@ -28,4 +28,6 @@ export const aiImports=sqliteTable('ai_imports',{
   id:text('id').primaryKey(),ownerId:text('owner_id').notNull().references(()=>profiles.id),
   status:text('status').notNull(),document:text('document').notNull(),createdAt:text('created_at').notNull(),updatedAt:text('updated_at').notNull(),
   lease:text('lease'),leaseUntil:integer('lease_until').notNull().default(0),
-});
+  nextRunAt:integer('next_run_at').notNull().default(0),attempts:integer('attempts').notNull().default(0),
+},table=>[index('ai_import_due').on(table.status,table.nextRunAt,table.leaseUntil),index('ai_import_owner_created').on(table.ownerId,table.createdAt),index('ai_import_created').on(table.createdAt)]);
+export const aiQueueState=sqliteTable('ai_queue_state',{id:text('id').primaryKey(),lastTick:integer('last_tick').notNull()});

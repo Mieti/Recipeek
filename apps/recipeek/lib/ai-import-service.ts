@@ -3,17 +3,19 @@ import {type Database,importRecipe,readableUpload,findImported} from './reposito
 import {digest} from './identity.ts';
 import {HttpError,readJsonBody} from './http.ts';
 import {recipeSchema} from './model.ts';
+import {sanitizePhoto} from './photo.ts';
 import {importInputSchema,publicImportUrl,socialUrl,extractedSchema,needsMore,validateExtraction,recipeFromExtraction,type ImportInput,type ImportSource,type Extraction} from './ai-import-model.ts';
 import {extractRecipe,supadata,importPrompt,extractionJsonSchema,type ImportEnv,type Usage} from './ai-import-provider.ts';
 
 export type ImportJob={id:string;status:string;input:ImportInput;sources:ImportSource[];draft?:Extraction;warnings:string[];usage:Usage[];credits:number|null;duration?:number;videoJob?:string;transcriptJob?:string;polls:number;error?:string;createdAt:string;recipeId?:string;review?:unknown;videoAttempted?:boolean;reviewRevision?:string};
-type Row={id:string;owner_id:string;status:string;document:string;created_at:string;updated_at:string;lease:string|null;lease_until:number};
+type Row={id:string;owner_id:string;status:string;document:string;created_at:string;updated_at:string;lease:string|null;lease_until:number;next_run_at:number;attempts:number};
 const output=(body:unknown,status=200)=>Response.json(body,{status,headers:{'cache-control':'private, no-store'}});
 async function row(db:Database,id:string,owner:string){const r=await db.prepare('SELECT * FROM ai_imports WHERE id=? AND owner_id=?').bind(id,owner).first<Row>();if(!r)throw new HttpError(404,'Importazione non trovata.');return r;}
 function decode(r:Row):ImportJob{return {...JSON.parse(r.document),id:r.id,status:r.status};}
 function view(j:ImportJob){return {...j,videoJob:undefined,transcriptJob:undefined,validation:j.draft?validateExtraction(j.draft,j.sources):null,recipe:j.draft?recipeFromExtraction(j.draft,j.input.url):null};}
 function credit(j:ImportJob,c:string|null){if(c===null||!Number.isFinite(Number(c)))j.credits=null;else if(j.credits!==null)j.credits+=Number(c);}
-const boundedText=(v:unknown)=>typeof v==='string'?v.slice(0,24000):'';
+export const cleanImportText=(v:string)=>v.replace(/\r\n?/g,'\n').replace(/[\t ]+/g,' ').replace(/\n{3,}/g,'\n\n').trim();
+const boundedText=(v:unknown)=>typeof v==='string'?cleanImportText(v).slice(0,24000):'';
 async function photosFor(j:ImportJob,db:Database,bucket:R2Bucket|undefined,owner:string){
   if(j.input.kind!=='photos')return [];
   if(!bucket)throw new HttpError(503,'Archivio foto non disponibile.');
@@ -25,7 +27,8 @@ async function photosFor(j:ImportJob,db:Database,bucket:R2Bucket|undefined,owner
     if(!pinned.meta.changes)throw new HttpError(409,'Una foto è stata rimossa. Caricala di nuovo.');
     const data=await bucket.get(id);if(!data)throw new HttpError(400,'Foto non disponibile. Caricala di nuovo.');
     size+=data.size;if(size>12_000_000)throw new HttpError(413,'Le foto superano 12 MB.');
-    photos.push({id:`photo-${index+1}`,mimeType:upload.content_type,data:Buffer.from(await data.arrayBuffer()).toString('base64')});
+    const clean=sanitizePhoto(new Uint8Array(await data.arrayBuffer()),upload.content_type);
+    photos.push({id:`photo-${index+1}`,mimeType:upload.content_type,data:Buffer.from(clean.data).toString('base64')});
   }return photos;
 }
 function videoAllowed(j:ImportJob,env:ImportEnv){return env.RECIPEEK_IMPORT_VIDEO==='true'&&j.input.url&&socialUrl(j.input.url)&&typeof j.duration==='number'&&j.duration>0&&j.duration<=180&&!j.videoAttempted;}
@@ -53,7 +56,12 @@ export async function advanceImport(j:ImportJob,env:ImportEnv,db:Database,bucket
     else{
       const content=r.data.content??r.data.result?.content;
       const text=typeof content==='string'?content:Array.isArray(content)?content.map((c:{text?:string;offset?:number})=>`${c.offset===undefined?'':`[${c.offset/1000}s] `}${c.text??''}`).join('\n'):'';
-      if(text.trim()){j.sources.push({id:'transcript-1',kind:'transcript',text:boundedText(text),label:'Trascrizione disponibile'});if(text.length>24000)j.warnings.push('Trascrizione troncata: controllare la fonte.');j.status='analyzeTranscript';}
+      if(text.trim()){
+        const plain=cleanImportText(text.replace(/\[\d+(?:\.\d+)?s\] /g,''));
+        const repeated=j.sources.some(s=>cleanImportText(s.text).toLocaleLowerCase('it').includes(plain.toLocaleLowerCase('it')));
+        if(repeated){j.warnings.push('La trascrizione ripete il testo già analizzato: nessuna seconda chiamata AI.');j.status=videoAllowed(j,env)?'videoStart':'ready';}
+        else{j.sources.push({id:'transcript-1',kind:'transcript',text:boundedText(text),label:'Trascrizione disponibile'});if(text.length>24000)j.warnings.push('Trascrizione troncata: controllare la fonte.');j.status='analyzeTranscript';}
+      }
       else{j.warnings.push('Trascrizione esistente non disponibile. Nessun audio generato automaticamente.');j.status=videoAllowed(j,env)?'videoStart':'ready';}
     }
   }else if(j.status==='videoStart'){
@@ -74,12 +82,13 @@ export async function advanceImport(j:ImportJob,env:ImportEnv,db:Database,bucket
 }
 
 export async function handleAiImport(req:Request,id:string|undefined,db:Database,owner:string,env:ImportEnv,bucket?:R2Bucket,fetcher:typeof fetch=fetch){
-  if(id==='config'&&req.method==='GET')return output({enabled:!!env.GEMINI_API_KEY,urls:!!env.SUPADATA_API_KEY,video:env.RECIPEEK_IMPORT_VIDEO==='true'});
+  if(id==='config'&&req.method==='GET'){const state=await db.prepare("SELECT last_tick FROM ai_queue_state WHERE id='imports'").first<{last_tick:number}>();return output({enabled:!!env.GEMINI_API_KEY,urls:!!env.SUPADATA_API_KEY,video:env.RECIPEEK_IMPORT_VIDEO==='true',queue:!!env.RECIPEEK_IMPORT_QUEUE_TOKEN,lastTick:state?.last_tick??null});}
   if(!id&&req.method==='GET'){const rows=await db.prepare("SELECT id,status,created_at,json_extract(document,'$.draft.title') AS title,json_extract(document,'$.input.url') AS url FROM ai_imports WHERE owner_id=? AND status<>'discarded' ORDER BY created_at DESC LIMIT 50").bind(owner).all<{id:string;status:string;created_at:string;title:string|null;url:string|null}>();return output(rows.results.map(r=>({id:r.id,status:r.status,createdAt:r.created_at,draft:{title:r.title},input:{url:r.url}})));}
   if(!id&&req.method==='POST'){
     if(!env.GEMINI_API_KEY)throw new HttpError(503,'Importazione AI in preparazione: servizio non ancora configurato.');
     const input=importInputSchema.parse(await readJsonBody(req));
     if(input.kind==='url'){try{input.url=publicImportUrl(input.url).href;}catch{throw new HttpError(400,'Inserisci un URL HTTPS pubblico senza credenziali o indirizzi IP.');}if(!env.SUPADATA_API_KEY)throw new HttpError(503,'Import da URL non ancora configurato. Usa testo o foto.');}
+    if(input.kind==='text'){input.text=cleanImportText(input.text);if(input.text.length<10)throw new HttpError(400,'Inserisci almeno dieci caratteri di testo utile.');}
     const hash=await digest(JSON.stringify([owner,input]));const key=`ai-${hash}`;
     const existing=await db.prepare('SELECT * FROM ai_imports WHERE id=? AND owner_id=?').bind(key,owner).first<Row>();if(existing)return output(view(decode(existing)));
     const now=new Date().toISOString(),j:ImportJob={id:key,status:input.kind==='url'?'acquire':'analyze',input,sources:input.kind==='text'?[{id:'text-1',kind:'text',text:input.text,label:'Testo inserito'}]:input.kind==='photos'?input.photos.map((_,i)=>({id:`photo-${i+1}`,kind:'photo',text:'',label:`Pagina ${i+1}`})):[],warnings:[],usage:[],credits:0,polls:0,createdAt:now};
@@ -91,7 +100,7 @@ export async function handleAiImport(req:Request,id:string|undefined,db:Database
   }
   if(!id)throw new HttpError(405,'Metodo non consentito.');
   const r=await row(db,id,owner),j=decode(r);
-  if(req.method==='GET')return output(view(j));
+  if(req.method==='GET')return output(new URL(req.url).searchParams.get('progress')==='1'?{id:j.id,status:j.status,error:j.error,ready:['ready','saved','failed','discarded'].includes(j.status)}:view(j));
   const action=z.object({action:z.enum(['advance','deepen','save','review','discard']),revision:z.string().optional(),recipe:recipeSchema.optional(),decisions:z.array(z.object({id:z.string(),status:z.enum(['accepted','edited','rejected']),value:z.string().max(2000)})).max(15).optional(),reviewed:z.literal(true).optional(),servingsConfirmed:z.literal(true).optional()}).parse(await readJsonBody(req));
   if(action.action==='review'){
     if(j.status!=='ready'||action.revision!==j.reviewRevision||!action.recipe)throw new HttpError(409,'La bozza è cambiata: riaprila.');
@@ -130,16 +139,35 @@ export async function handleAiImport(req:Request,id:string|undefined,db:Database
     const discarded=await db.prepare("UPDATE ai_imports SET status='discarded',document=?,updated_at=? WHERE id=? AND owner_id=? AND updated_at=? AND lease_until<=?").bind(JSON.stringify(j),new Date().toISOString(),id,owner,r.updated_at,Date.now()).run();if(!discarded.meta.changes)throw new HttpError(409,'L’importazione è cambiata. Riaprila.');return output(view(j));
   }
   if(action.action==='deepen'){
-    if(j.status!=='ready'||!videoAllowed(j,env))throw new HttpError(400,'Approfondimento video non disponibile per questa fonte.');j.status='videoStart';
-  }else if(['ready','saved','failed','discarded'].includes(j.status))return output(view(j));
-  if(r.lease_until>Date.now())return output(view(j),202);
+    if(j.status!=='ready'||action.revision!==j.reviewRevision||!videoAllowed(j,env))throw new HttpError(409,'Approfondimento non disponibile o bozza cambiata.');
+    j.status='videoStart';delete j.error;
+    const changed=await db.prepare("UPDATE ai_imports SET status='videoStart',document=?,next_run_at=0,attempts=0,updated_at=? WHERE id=? AND owner_id=? AND status='ready' AND updated_at=? AND lease_until<=?").bind(JSON.stringify(j),new Date().toISOString(),id,owner,r.updated_at,Date.now()).run();
+    if(!changed.meta.changes)throw new HttpError(409,'La bozza è cambiata. Riaprila.');
+  }
+  // Legacy clients may ask to advance; only the server queue performs work.
+  return output(view(j),202);
+}
+
+export async function processImportJob(db:Database,id:string,owner:string,env:ImportEnv,bucket?:R2Bucket,fetcher:typeof fetch=fetch){
+  const r=await row(db,id,owner),j=decode(r),now=Date.now();
+  if(['ready','saved','failed','discarded'].includes(j.status)||r.lease_until>now||r.next_run_at>now)return {job:j,processed:false};
   if(j.status==='saving'){
     const found=await findImported(db,owner,{key:j.id});j.status=found?'saved':'ready';j.recipeId=found??undefined;
-    await db.prepare("UPDATE ai_imports SET status=?,document=?,lease_until=0 WHERE id=? AND owner_id=? AND status='saving' AND lease_until<=?").bind(j.status,JSON.stringify(j),id,owner,Date.now()).run();return output(view(j));
+    await db.prepare("UPDATE ai_imports SET status=?,document=?,lease_until=0 WHERE id=? AND owner_id=? AND status='saving' AND lease_until<=?").bind(j.status,JSON.stringify(j),id,owner,now).run();return {job:j,processed:true};
   }
-  if(r.lease){j.status='failed';j.error='Operazione interrotta: per evitare costi duplicati non viene ripetuta automaticamente.';}
+  const safePoll=['videoPoll','transcriptPoll'].includes(j.status);
+  if(r.lease&&!safePoll){j.status=j.draft?'ready':'failed';j.error='Operazione interrotta con esito incerto: non ripetiamo automaticamente la generazione a pagamento.';}
   const lease=crypto.randomUUID();
-  const acquired=await db.prepare('UPDATE ai_imports SET lease=?,lease_until=? WHERE id=? AND owner_id=? AND updated_at=? AND lease_until<=?').bind(lease,Date.now()+45000,id,owner,r.updated_at,Date.now()).run();if(!acquired.meta.changes)return output(view(decode(await row(db,id,owner))),202);
-  try{if(j.status!=='failed')await advanceImport(j,env,db,bucket,owner,fetcher);}catch(e){j.status=j.draft?'ready':'failed';j.error=e instanceof HttpError?e.message:'Importazione interrotta o risposta non valida. Nessun nuovo tentativo automatico.';}
-  await db.prepare('UPDATE ai_imports SET status=?,document=?,updated_at=?,lease=NULL,lease_until=0 WHERE id=? AND owner_id=? AND lease=?').bind(j.status,JSON.stringify(j),new Date().toISOString(),id,owner,lease).run();return output(view(j));
+  const acquired=await db.prepare('UPDATE ai_imports SET lease=?,lease_until=? WHERE id=? AND owner_id=? AND updated_at=? AND lease_until<=? AND next_run_at<=?').bind(lease,now+45000,id,owner,r.updated_at,now,now).run();
+  if(!acquired.meta.changes)return {job:decode(await row(db,id,owner)),processed:false};
+  let attempts=0,next=0;
+  try{
+    if(!j.error)await advanceImport(j,env,db,bucket,owner,fetcher);
+    next=Date.now()+(j.status.endsWith('Poll')?5000:0);
+  }catch(e){
+    if(safePoll&&(r.attempts??0)<2){attempts=(r.attempts??0)+1;next=Date.now()+60000*attempts;}
+    else{j.status=j.draft?'ready':'failed';j.error=e instanceof HttpError?e.message:'Importazione interrotta o risposta non valida. Nessun nuovo tentativo automatico.';}
+  }
+  await db.prepare('UPDATE ai_imports SET status=?,document=?,updated_at=?,lease=NULL,lease_until=0,next_run_at=?,attempts=? WHERE id=? AND owner_id=? AND lease=?').bind(j.status,JSON.stringify(j),new Date().toISOString(),next,attempts,id,owner,lease).run();
+  return {job:j,processed:true};
 }
