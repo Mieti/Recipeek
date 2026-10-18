@@ -17,6 +17,12 @@ export const extractedSchema=z.object({
 }).strict();
 export type Extraction=z.infer<typeof extractedSchema>;
 export type ImportInput={kind:'text'|'url'|'photos';text?:string;url?:string;photos?:string[]};
+const recipeFields=recipeSchema.innerType();
+export const importReviewSchema=recipeFields.extend({
+  title:z.string().max(140),servings:z.number().int().min(0).max(100),
+  ingredients:z.array(recipeFields.shape.ingredients.element.extend({name:z.string().max(150),quantity:z.number().finite().min(0).max(100000).nullable()})).max(100),
+  steps:z.array(recipeFields.shape.steps.element.extend({text:z.string().max(5000)})).max(100),
+});
 export const importInputSchema=z.discriminatedUnion('kind',[
   z.object({kind:z.literal('text'),text:z.string().trim().min(10).max(24000)}).strict(),
   z.object({kind:z.literal('url'),url:z.string().max(2000)}).strict(),
@@ -59,14 +65,30 @@ export function validateExtraction(d:Extraction,sources:ImportSource[]){
     }
   }
   for(const s of d.steps){check(s.evidence,`Passaggio ${s.id}`);if(s.ingredientIds.some(id=>!ids.has(id)))blocking.push('Un passaggio cita un ingrediente inesistente.');}
-  for(const [v,e,label] of [[d.servings,d.servingsEvidence,'Porzioni'],[d.prepMinutes,d.prepEvidence,'Preparazione'],[d.cookMinutes,d.cookEvidence,'Cottura']] as const)if(v!==null)check(e,label);
+  for(const [v,e,label] of [[d.servings,d.servingsEvidence,'Porzioni'],[d.prepMinutes,d.prepEvidence,'Preparazione'],[d.cookMinutes,d.cookEvidence,'Cottura']] as const)if(v!==null){
+    check(e,label);
+    if(e){const values=label==='Porzioni'?evidenceNumbers(e.quote):minutesInQuote(e.quote);
+      if(!values.some(n=>Math.abs(n-v)<0.000001))warnings.push(`${label}: valore numerico da verificare rispetto alla citazione.`);
+    }
+  }
   if(d.servings===null)warnings.push('Numero di porzioni da specificare prima del ricalcolo.');
   if(d.prepMinutes===null)warnings.push('Tempo di preparazione non specificato.');
   if(d.cookMinutes===null)warnings.push('Tempo di cottura non specificato.');
   if(sources.some(s=>/(dosi|ingredienti|quantit[aà]).{0,35}(video|schermo|immagine)|vedi.{0,20}(video|foto)|seconda (foto|immagine)/i.test(s.text)))warnings.push('Il testo rimanda a informazioni visive.');
   return {warnings:[...new Set(warnings)],blocking:[...new Set(blocking)]};
 }
-export function needsMore(d:Extraction,sources:ImportSource[]){const v=validateExtraction(d,sources);return d.classification==='partial_recipe'||d.classification==='insufficient_content'||d.needsVisual||d.conflicts.length>0||d.missing.length>0||v.warnings.some(w=>!/^(Numero di porzioni|Tempo di preparazione|Tempo di cottura)/.test(w)&&!w.includes('associazione')&&!w.includes('unità da verificare'))||v.blocking.length>0;}
+export function minutesInQuote(text:string){
+  const value=norm(text).replaceAll(',','.');
+  const matches=[...value.matchAll(/(\d+(?:\.\d+)?|mezza?|un(?:a|o)?|due|tre|quattro|cinque|dieci|quindici|venti|trenta|quaranta|sessanta)\s*(or[ae]\b|hours?\b|h\b|minut[oi]\b|minutes?\b|min\b|second[oi]\b|seconds?\b|sec\b)/g)];
+  const words:Record<string,number>={mezzo:.5,mezza:.5,un:1,uno:1,una:1,due:2,tre:3,quattro:4,cinque:5,dieci:10,quindici:15,venti:20,trenta:30,quaranta:40,sessanta:60};
+  const parts=matches.map(m=>(words[m[1]]??Number(m[1]))*(/^(or|h)/.test(m[2])?60:/^(sec)/.test(m[2])?1/60:1));
+  if(!parts.length)return []; // A bare number is not evidence of minutes.
+  const result=[...parts];
+  if(parts.length>1&&/\d[^\n,;]*\b(?:or[ae]|hours?|h)\b[^\n,;]*\b(?:minut[oi]|minutes?|min)\b/.test(value))result.push(parts.reduce((a,b)=>a+b,0));
+  if(/(?:ora|hour)\s+e\s+mezza/.test(value))result.push(90);
+  return result;
+}
+export function needsMore(d:Extraction,sources:ImportSource[]){const v=validateExtraction(d,sources);return d.classification==='partial_recipe'||d.classification==='insufficient_content'||d.needsVisual||d.conflicts.length>0||d.missing.length>0||v.warnings.some(w=>!/^(Numero di porzioni|Tempo di preparazione|Tempo di cottura)/.test(w)&&!w.includes('associazione')&&!w.includes('unità da verificare')&&!w.includes('valore numerico da verificare'))||v.blocking.length>0;}
 export function recipeFromExtraction(d:Extraction,url=''):RecipeInput{
   return {title:d.title,description:d.description,category:'Altro',method:'Altro',servings:d.servings??1,prepMinutes:d.prepMinutes??0,cookMinutes:d.cookMinutes??0,image:'',sourceUrl:url,sourceAuthor:'',notes:'',collection:'',favorite:false,visibility:'private',pan:null,
     ingredients:d.ingredients.map(i=>({id:i.id,name:i.name,quantity:i.quantity,quantityKind:i.quantity===null?(/q\.?\s*b\.?|quanto basta|a piacere/i.test(i.originalText)?"to_taste" as const:"unspecified" as const):undefined,unit:i.unit})),steps:d.steps.map(s=>({id:s.id,text:s.text,image:'',videoUrl:'',timerMinutes:0,ingredients:s.ingredientIds.map(ingredientId=>({ingredientId,quantity:null}))}))};

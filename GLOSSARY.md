@@ -1,7 +1,7 @@
 # Glossario Recipeek
 
 - **Ricetta**: documento salvato dall’utente, con ingredienti, dosi originali, porzioni, passaggi, riferimenti e note.
-- **Bozza**: ricetta in lavorazione, non ancora confermata nel catalogo. Una **bozza manuale** è conservata automaticamente sul browser corrente; una **bozza AI** proviene dall’importazione, conserva sul server l’estrazione e richiede revisione. Le modifiche nella revisione AI si conservano con “Salva bozza”.
+- **Bozza**: ricetta in lavorazione, non ancora confermata nel catalogo. Una **bozza manuale** è conservata automaticamente sul browser corrente; una **bozza AI** proviene dall’importazione, conserva sul server l’estrazione e richiede revisione. Le modifiche nella revisione AI si salvano automaticamente anche con campi incompleti; “Salva bozza” permette un salvataggio esplicito. Lo stato conferma l’esito, mentre ricetta finale e porzioni richiedono validazione completa.
 - **Suggerimento AI**: integrazione proposta separatamente dai dati estratti dalla fonte, modificabile e da accettare o scartare esplicitamente. Non rende completa una fonte incompleta.
 - **Importazione AI**: processo privato e persistente di acquisizione, estrazione e revisione di una fonte. Privilegia il testo e approfondisce quando necessario; la coda server elabora le fasi anche a browser chiuso e conserva la bozza da revisionare.
 - **Cestino**: ricette rimosse dal catalogo ma ancora recuperabili dal proprietario, con le foto conservate. Il ripristino mantiene la ricetta privata; l’eliminazione definitiva non è reversibile.

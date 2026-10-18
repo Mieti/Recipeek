@@ -10,6 +10,16 @@ L’interfaccia è `/import`, raggiungibile da “Importa con AI” nel ricettar
 4. In produzione configurarle come variabili **segrete** Sites. Una nuova distribuzione applica la revisione dell’ambiente. Non inserirle nel manifest, nei sorgenti, negli argomenti shell o in chat.
 5. Lasciare `RECIPEEK_IMPORT_VIDEO=false` durante i primi test. Abilitarlo solo dopo aver verificato Supadata Extract e i suoi costi; l’app limita i video alla durata nota di tre minuti.
 
+## Budget e beta
+
+Il servizio applica per default 5 USD stimati/mese per Gemini e 100 crediti/mese Supadata, su mesi UTC. `RECIPEEK_AI_MONTHLY_BUDGET_USD` e `RECIPEEK_SUPADATA_MONTHLY_CREDITS` permettono di modificarli nel runtime; zero blocca nuove chiamate. Con Basic impostare 300 crediti soltanto dopo aver attivato quel piano. Nessuna ricarica viene acquistata dall'app.
+
+Prima di ciascuna analisi vengono riservati prudentemente 0,50 USD per testo/URL o 2 USD per foto; un budget residuo inferiore alla riserva richiesta non consente l'avvio. Contatori completi sostituiscono la riserva con il costo stimato; consumi mancanti mantengono la riserva, quindi pochi errori incerti possono fermare la beta anche con una fattura bassa. Supadata riserva un credito per richiesta (15 per avvio video) e riconcilia l'header di fatturazione quando disponibile. Le riserve non vanno cancellate senza confrontare i consumi nei provider.
+
+Il registro `ai_import_budget` conserva un identificativo del tentativo e del lavoro, proprietario, provider, mese, importo impegnato e completezza del conteggio. `charge` è in microdollari per Gemini e crediti interi arrotondati per Supadata. Non contiene chiavi o prompt. Gemini Interactions espone output e ragionamento separati, entrambi inclusi nella stima di costo di output una volta sola. Le tariffe nel codice vanno riviste quando cambiano i listini; il controllo non sostituisce quelli del provider.
+
+`RECIPEEK_AI_ALLOWED_PROFILES`, facoltativo, contiene ID profilo Recipeek separati da virgole. Se valorizzato limita creazione, ripetizione e approfondimento AI a quei profili, lasciando agli altri il ricettario manuale. Non inserire indirizzi email, token o credenziali. La configurazione di default non è una lista di inviti: per una beta chiusa va compilata con gli account autorizzati.
+
 ## Coda cloud
 
 La coda è persistente in D1. Il processo cloud `recipeek-import-queue` su Supabase richiama il Worker ogni minuto anche a browser chiuso. Il token interno `RECIPEEK_IMPORT_QUEUE_TOKEN` è un segreto generato per il servizio, distinto dalle chiavi Gemini e Supadata: non deve essere fornito agli utenti o inserito nel client.
