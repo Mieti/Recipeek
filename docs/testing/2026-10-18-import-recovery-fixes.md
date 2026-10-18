@@ -25,4 +25,13 @@ Migrazioni additive `0006`–`0008`: chiave/generazione con backfill dei lavori 
 
 Le chiavi Gemini/Supadata restano da configurare. Non sono state fatte chiamate AI reali o a pagamento; qualità, copertura social, consumi fatturati e prove iPhone/iPad rimangono da verificare. Il fetch diretto dei siti con JSON-LD è una futura ottimizzazione; il trasporto resta Supadata. Il cron a un minuto mantiene i limiti di latenza della beta.
 
-Identificativi della distribuzione e verifica cloud verranno registrati dopo la pubblicazione.
+## Pubblicazione verificata
+
+- Commit GitHub: `0c1fc4d`, [CI riuscita](https://github.com/Mieti/Recipeek/actions/runs/39150909025).
+- Sorgente Sites: `af93389b95435b5c22f872d35e5d5cfe80b1486d`.
+- Versione **14**: `appgprj_6ad2743d738081919511870b64108e39~appgver_f91e5576d8608191a05b3bf27eda63cc`.
+- Deployment riuscito: `appgdep_6ad5052f37f4819182b842b6d04bd094`, ambiente revisione 3, pubblico invariato.
+- TypeScript e build produzione riusciti; archivio di distribuzione verificato dal servizio, 255 file.
+- Produzione anonima: landing/account HTTP 200; configurazione AI e tick interno senza token HTTP 401; risposte `private, no-store`.
+- Supabase Cron ancora attivo; nuovo richiamo cloud dopo la pubblicazione e ultimi esiti HTTP 200 senza timeout, `processed:0, disabled:true` per assenza della chiave Gemini. Nessun acquisto di servizi, piano o ricarica.
+- Nessun listener locale residuo sulla porta 5173 al termine del collaudo.
