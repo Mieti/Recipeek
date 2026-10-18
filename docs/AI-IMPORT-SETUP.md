@@ -40,4 +40,4 @@ Fonti ufficiali per verificare il contratto corrente: [Gemini Structured Outputs
 - Misurare costo per bozza accettata, latenza e tempo di correzione. Usare un insieme separato di esempi per validare le modifiche al prompt.
 - Testare dal telefono reale acquisizione foto, tastiera, riapertura della bozza e salvataggio.
 
-Non sono stati eseguiti import a pagamento durante l’implementazione perché le chiavi erano assenti. Gli adapter sono verificati con risposte simulate aderenti ai contratti documentati, non con chiamate reali.
+Le chiavi sono state attivate in produzione il 18 ottobre 2026. Le prime prove reali di testo, pagina web e YouTube, i consumi e i limiti ancora da verificare sono documentati nel [collaudo iniziale](testing/2026-10-18-first-live-imports.md). I test automatici restano indipendenti dalle chiavi e dalle API esterne.
