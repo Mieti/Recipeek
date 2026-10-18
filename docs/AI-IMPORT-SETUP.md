@@ -41,3 +41,5 @@ Fonti ufficiali per verificare il contratto corrente: [Gemini Structured Outputs
 - Testare dal telefono reale acquisizione foto, tastiera, riapertura della bozza e salvataggio.
 
 Le chiavi sono state attivate in produzione il 18 ottobre 2026. Le prime prove reali di testo, pagina web e YouTube, i consumi e i limiti ancora da verificare sono documentati nel [collaudo iniziale](testing/2026-10-18-first-live-imports.md). I test automatici restano indipendenti dalle chiavi e dalle API esterne.
+
+Il [collaudo social e foto del 19 ottobre](testing/2026-10-19-social-photo-imports.md) copre anche i link Instagram/TikTok forniti dal proprietario, una pagina fotografica di prova e guardrail con Gemini reale. Un risultato parziale resta incompleto se descrizione e trascrizione non contengono il procedimento: il video visivo rimane disattivato.
