@@ -1,6 +1,9 @@
 declare namespace Cloudflare {
   interface Env {
     DB?: D1Database;
+    GEMINI_API_KEY?:string;
+    SUPADATA_API_KEY?:string;
+    RECIPEEK_IMPORT_VIDEO?:string;
     BUCKET?: R2Bucket;
     RECIPEEK_AUTH_MODE?: 'sites'|'supabase';
     SUPABASE_URL?: string;

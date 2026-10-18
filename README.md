@@ -4,9 +4,9 @@ Ricettario personale con import assistito da AI e revisione prima del salvataggi
 
 ## Stato attuale
 
-È stata aggiunta la **prima app web completa del flusso manuale**, con database e foto persistenti, editor, catalogo, filtri, dosi, modalità cooking, profili/follow e condivisione esplicita. Il sorgente è in [`apps/recipeek`](apps/recipeek/README.md); il primo deploy usa Sites con accesso privato. Per avvio, test e limiti, leggi il README dell’app. Il modello AI è rinviato alla fase successiva.
+L’app web include ricettario, editor, foto persistenti, filtri, dosi, cooking, profili/follow e condivisione esplicita. La landing è pubblica e gli account usano Supabase Auth.
 
-**App online:** [Recipeek](https://recipeek.muddydace3.chatgpt.site), accesso privato tramite ChatGPT. Il deploy è stato confermato come riuscito il 16 ottobre 2026; il controllo dal browser ha verificato la schermata di accesso, mentre l’uso autenticato in produzione richiede il login del proprietario. I test funzionali sono stati eseguiti sul database locale.
+**App online:** [Recipeek](https://recipeek.muddydace3.chatgpt.site/). Il nuovo flusso `/import` supporta bozze AI progressive da URL, testo e foto, con suggerimenti separati e revisione. L’attivazione attende le chiavi Gemini/Supadata; i provider reali e il benchmark di qualità restano da verificare. Leggi [configurazione AI](docs/AI-IMPORT-SETUP.md) e [decisione architetturale](docs/adr/0008-importazione-progressiva-ai.md).
 
 Le sezioni seguenti riguardano il laboratorio di importazione preparato in precedenza.
 

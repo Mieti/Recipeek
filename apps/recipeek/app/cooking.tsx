@@ -1,7 +1,7 @@
 'use client';
 import {useEffect,useRef,useState,type PointerEvent} from 'react';
 import {ArrowLeft,ArrowUpRight,Check,CheckCheck,ChefHat,ChevronLeft,ChevronRight,Leaf,Play,Sun} from 'lucide-react';
-import {formatQuantity,type Recipe} from '../lib/model';
+import {formatIngredientQuantity,formatQuantity,type Recipe} from '../lib/model';
 import {formatUnit} from '../lib/units';
 import {adjacentStep,stepTapDirection,type StepTap} from '../lib/cooking-navigation';
 import {removeKitchenState,writeKitchenState} from '../lib/kitchen-state';
@@ -44,7 +44,7 @@ export default function Cooking({initial,userId,onExit}:{initial:{recipe:Recipe;
             <div className="focus-step-top"><span className="focus-step-number">{String(index+1).padStart(2,'0')}</span><div><p className="eyebrow">{index===0?'SI COMINCIA':last?'IL TOCCO FINALE':'UN PASSAGGIO ALLA VOLTA'}</p><p className="focus-step-count" aria-live="polite">Passaggio {index+1} di {r.steps.length}</p></div></div>
             <h1 ref={heading} tabIndex={-1}>{step.text}</h1>
             {step.image&&<img className="focus-step-photo" src={step.image} alt={`Foto del passaggio ${index+1}`} draggable={false}/>}
-            {step.ingredients.length>0&&<section className="focus-step-ingredients" aria-label="Ingredienti di questo passaggio"><p className="eyebrow">TI SERVE ADESSO</p><div>{step.ingredients.map(use=>{const ingredient=r.ingredients.find(item=>item.id===use.ingredientId);if(!ingredient)return null;return <span className="focus-ingredient" key={ingredient.id}><span>{ingredient.name}</span>{use.quantity!==null?<strong>{formatQuantity(use.quantity,initial.factor)} {formatUnit(ingredient.unit,use.quantity*initial.factor)}</strong>:ingredient.quantity===null?<strong>q.b.</strong>:null}</span>;})}</div></section>}
+            {step.ingredients.length>0&&<section className="focus-step-ingredients" aria-label="Ingredienti di questo passaggio"><p className="eyebrow">TI SERVE ADESSO</p><div>{step.ingredients.map(use=>{const ingredient=r.ingredients.find(item=>item.id===use.ingredientId);if(!ingredient)return null;return <span className="focus-ingredient" key={ingredient.id}><span>{ingredient.name}</span>{use.quantity!==null?<strong>{formatQuantity(use.quantity,initial.factor)} {formatUnit(ingredient.unit,use.quantity*initial.factor)}</strong>:ingredient.quantity===null?<strong>{formatIngredientQuantity(ingredient,initial.factor)}</strong>:null}</span>;})}</div></section>}
             {step.timerMinutes>0&&<div data-no-step-tap><StepTimer key={timerKey} storageKey={timerKey} minutes={step.timerMinutes}/></div>}
             {step.videoUrl&&<a className="focus-video" href={step.videoUrl} target="_blank" rel="noopener noreferrer"><Play size={16}/>Guarda questo passaggio<ArrowUpRight size={15}/></a>}
           </main>
@@ -53,6 +53,6 @@ export default function Cooking({initial,userId,onExit}:{initial:{recipe:Recipe;
       </div>
       <footer className="focus-footer"><button className="focus-ingredients-button" onClick={()=>setIngredientsOpen(true)}><Leaf size={19}/><span>Tutte le dosi<small>{initial.servings} persone{initial.factor!==1?' · dosi ricalcolate':''}</small></span></button><p>Tocca a sinistra per tornare,<br/>a destra per continuare.</p><button className="button primary" onClick={()=>last?finish():go('next')}>{last?'Ho finito':'Avanti'}{last?<Check size={19}/>:<ChevronRight size={19}/>}</button></footer>
     </>}
-    {ingredientsOpen&&<Modal label="Ingredienti della sessione" onClose={()=>setIngredientsOpen(false)}><h2>Le dosi, tutte qui.</h2><p>{r.title} · {initial.servings} persone{initial.factor!==1?' · dosi ricalcolate':''}</p><div className="focus-all-ingredients">{r.ingredients.map(ingredient=><div key={ingredient.id}><span>{ingredient.name}</span><strong>{formatQuantity(ingredient.quantity,initial.factor)} {formatUnit(ingredient.unit,ingredient.quantity===null?null:ingredient.quantity*initial.factor)}</strong></div>)}</div><button className="button primary" onClick={()=>setIngredientsOpen(false)}>Torna al passaggio<ChevronRight size={18}/></button></Modal>}
+    {ingredientsOpen&&<Modal label="Ingredienti della sessione" onClose={()=>setIngredientsOpen(false)}><h2>Le dosi, tutte qui.</h2><p>{r.title} · {initial.servings} persone{initial.factor!==1?' · dosi ricalcolate':''}</p><div className="focus-all-ingredients">{r.ingredients.map(ingredient=><div key={ingredient.id}><span>{ingredient.name}</span><strong>{formatIngredientQuantity(ingredient,initial.factor)} {formatUnit(ingredient.unit,ingredient.quantity===null?null:ingredient.quantity*initial.factor)}</strong></div>)}</div><button className="button primary" onClick={()=>setIngredientsOpen(false)}>Torna al passaggio<ChevronRight size={18}/></button></Modal>}
   </div>;
 }

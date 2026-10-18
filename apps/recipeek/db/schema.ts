@@ -24,3 +24,8 @@ export const externalIdentities = sqliteTable('external_identities', {
   profileId:text('profile_id').notNull().unique().references(()=>profiles.id),
   createdAt:text('created_at').notNull(),
 });
+export const aiImports=sqliteTable('ai_imports',{
+  id:text('id').primaryKey(),ownerId:text('owner_id').notNull().references(()=>profiles.id),
+  status:text('status').notNull(),document:text('document').notNull(),createdAt:text('created_at').notNull(),updatedAt:text('updated_at').notNull(),
+  lease:text('lease'),leaseUntil:integer('lease_until').notNull().default(0),
+});

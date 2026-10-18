@@ -6,13 +6,15 @@ import { listRecipes, readRecipe, readableUpload, saveRecipe, removeRecipe, list
 import { HttpError, readLimitedBody, readJsonBody, assertSameOrigin } from './http.ts';
 import { enforceRateLimit, cleanupUploads, storageUsage, storeUpload } from './media-storage.ts';
 import { sanitizePhoto } from './photo.ts';
+import {handleAiImport} from './ai-import-service.ts';
+import type {ImportEnv} from './ai-import-provider.ts';
 
 import type {Database} from './repository.ts';
 export type ApiUser={userId:string};
 const json = (body: unknown, status = 200, headers: Record<string,string> = {}) => Response.json(body, {status, headers: {'cache-control':'private, no-store', 'x-content-type-options':'nosniff', ...headers}});
-const methods: Record<string, string[]> = {me:['GET','PATCH'],ingredients:['GET'],recipes:['GET','POST'],'recipes/id':['GET','PATCH','DELETE'],people:['GET'],'follow/id':['POST','DELETE'],media:['POST'],'media/id':['GET'],storage:['GET','POST'],trash:['GET'],'trash/id':['POST','DELETE'],backup:['GET'],imports:['POST'],'imports/id':['POST'],'import-media':['POST']};
+const methods: Record<string, string[]> = {'ai-imports':['GET','POST'],'ai-imports/id':['GET','POST'],me:['GET','PATCH'],ingredients:['GET'],recipes:['GET','POST'],'recipes/id':['GET','PATCH','DELETE'],people:['GET'],'follow/id':['POST','DELETE'],media:['POST'],'media/id':['GET'],storage:['GET','POST'],trash:['GET'],'trash/id':['POST','DELETE'],backup:['GET'],imports:['POST'],'imports/id':['POST'],'import-media':['POST']};
 
-export async function handleApi(req:Request,{user,db,bucket}:{user:ApiUser|null;db:Database|undefined;bucket?:R2Bucket}) {
+export async function handleApi(req:Request,{user,db,bucket,importEnv={}}:{user:ApiUser|null;db:Database|undefined;bucket?:R2Bucket;importEnv?:ImportEnv}) {
   try {
     if (!user) return json({error:'Accedi per usare il tuo ricettario.'},401);
     assertSameOrigin(req);
@@ -29,6 +31,8 @@ export async function handleApi(req:Request,{user,db,bucket}:{user:ApiUser|null;
     if (!db) return json({error:'Database non disponibile. Riprova tra poco.'},503);
     await enforceRateLimit(db,user.userId,'api');
     await db.prepare('INSERT OR IGNORE INTO profiles (id,name,bio,discoverable,created_at) VALUES (?,?,?,?,?)').bind(user.userId,'Cuoco di casa','',0,new Date().toISOString()).run();
+
+    if(resource==='ai-imports')return await handleAiImport(req,id,db,user.userId,importEnv,bucket);
 
     if (resource === 'me') {
       if (req.method === 'PATCH') {
