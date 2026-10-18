@@ -4,7 +4,7 @@ import {fixture} from './database.ts';
 import {handleAiImport,processImportJob,type ImportJob} from '../lib/ai-import-service.ts';
 import {runImportQueue} from '../lib/ai-import-queue.ts';
 import {extractionJsonSchema} from '../lib/ai-import-provider.ts';
-import {minutesInQuote,validateExtraction,needsMore,recipeFromExtraction,type Extraction} from '../lib/ai-import-model.ts';
+import {minutesInQuote,validateExtraction,needsMore,recipeFromExtraction,publicImportUrl,type Extraction} from '../lib/ai-import-model.ts';
 import {cleanupUploads} from '../lib/media-storage.ts';
 import {transcriptFirst,recipeTextWindow} from '../lib/ai-import-text.ts';
 import {reserveImportBudget,settleImportBudget} from '../lib/ai-import-budget.ts';
@@ -98,6 +98,28 @@ test('web evidence ignores Markdown emphasis and understands English minute abbr
   assert.deepEqual(validateExtraction(d,[{id:'text-1',kind:'web',text:source,label:'Pagina'}]).warnings,[]);
   assert.ok(minutesInQuote('1 hour 30 mins').includes(90));
   d.prepMinutes=50;assert.ok(validateExtraction(d,[{id:'text-1',kind:'web',text:source,label:'Pagina'}]).warnings.some(w=>w.startsWith('Preparazione: valore')));
+});
+
+test('transcript timestamp metadata does not invalidate cross-segment quotes or add recipe quantities',()=>{
+  const d=structuredClone(draft);d.steps[0].evidence=ev('Cuoci la pasta. Per 2 persone.');d.ingredients[0].evidence=ev('[0s] 200 g pasta');
+  const source='[0s] Pasta: 200 g pasta.\n[5.12s] Cuoci la pasta.\n[7s] Per 2 persone.\n[10s] Preparazione 5 minuti.\n[12s] Cottura 10 minuti.';
+  const sources=[{id:'text-1',kind:'transcript' as const,text:source,label:'Trascrizione'}];
+  assert.deepEqual(validateExtraction(d,sources).warnings,[]);
+  d.ingredients[0].quantity=201;assert.ok(validateExtraction(d,sources).warnings.some(w=>w.includes('associazione')));
+});
+
+test('visual review keeps one notice and missing evidence; unrelated content has no recipe-completion warnings',()=>{
+  const d=structuredClone(draft),sources=[{id:'text-1',kind:'photo' as const,text:'',label:'Pagina'}];
+  assert.equal(validateExtraction(d,sources).warnings.length,1);
+  d.ingredients[0].evidence.sourceId='absent';assert.ok(validateExtraction(d,sources).warnings.some(w=>w.includes('evidenza assente')));
+  const unrelated={...structuredClone(draft),classification:'not_recipe' as const,title:'',ingredients:[],steps:[],servings:null,prepMinutes:null,cookMinutes:null};
+  assert.deepEqual(validateExtraction(unrelated,[]),{warnings:[],blocking:['La fonte non contiene una ricetta sufficientemente riconoscibile.']});
+});
+
+test('social sharing parameters do not change source identity; website query parameters remain meaningful',()=>{
+  assert.equal(publicImportUrl('https://www.tiktok.com/@chef/video/123?is_from_webapp=1&sender_device=pc').href,'https://www.tiktok.com/@chef/video/123');
+  assert.equal(publicImportUrl('https://www.instagram.com/reel/ABC/?utm_source=share&rpxt=one&srtk=two').href,'https://www.instagram.com/reel/ABC/');
+  assert.equal(publicImportUrl('https://recipes.example.org/page?sender_device=pc&id=2').search,'?sender_device=pc&id=2');
 });
 
 test('saved source photos can be released without touching recipe media; initial validation does not buffer photos',async()=>{

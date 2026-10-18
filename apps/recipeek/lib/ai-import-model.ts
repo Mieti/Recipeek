@@ -31,7 +31,8 @@ export const importInputSchema=z.discriminatedUnion('kind',[
 export function publicImportUrl(raw:string){
   const u=new URL(raw),h=u.hostname.toLowerCase();
   if(u.protocol!=='https:'||u.username||u.password||(u.port&&u.port!=='443')||!h.includes('.')||/^[\d.]+$/.test(h)||h.includes(':')||/(^|\.)(localhost|local|internal|test|invalid|example)$/.test(h))throw new Error('Usa un URL HTTPS pubblico, senza credenziali o indirizzi IP.');
-  for(const key of [...u.searchParams.keys()])if(key.startsWith('utm_')||['igsh','igshid','fbclid'].includes(key))u.searchParams.delete(key);
+  const social=socialUrl(u.href);
+  for(const key of [...u.searchParams.keys()])if(key.startsWith('utm_')||['igsh','igshid','fbclid'].includes(key)||(social&&['rpxt','srtk','is_from_webapp','sender_device'].includes(key)))u.searchParams.delete(key);
   u.hash='';return u;
 }
 export function socialUrl(url:string){const h=new URL(url).hostname;return ['instagram.com','tiktok.com','youtube.com','youtu.be'].some(d=>h===d||h.endsWith('.'+d));}
@@ -49,31 +50,36 @@ export function evidenceNumbers(text:string){
 }
 export function validateExtraction(d:Extraction,sources:ImportSource[]){
   const warnings:string[]=[...d.missing,...d.conflicts],blocking:string[]=[];
+  if(d.classification==='not_recipe')return {warnings:[...new Set(warnings)],blocking:['La fonte non contiene una ricetta sufficientemente riconoscibile.']};
   if(!['recipe','partial_recipe'].includes(d.classification))blocking.push('La fonte non contiene una ricetta sufficientemente riconoscibile.');
   if(d.title.trim().length<2||!d.ingredients.length||!d.steps.length)blocking.push('Servono un titolo, ingredienti e procedimento.');
   const ids=new Set(d.ingredients.map(i=>i.id));
   if(ids.size!==d.ingredients.length||new Set(d.steps.map(s=>s.id)).size!==d.steps.length||new Set(d.suggestions.map(s=>s.id)).size!==d.suggestions.length)blocking.push('Identificativi duplicati nella risposta.');
+  const visual=new Set<string>();
+  const evidenceText=(value:string,kind?:string)=>kind==='transcript'?value.replace(/^\[\d+(?:\.\d+)?s\][ \t]*/gm,''):value;
+  const quoteText=(e:z.infer<typeof evidence>)=>evidenceText(e.quote,sources.find(s=>s.id===e.sourceId)?.kind);
   const check=(e:z.infer<typeof evidence>|null,label:string)=>{
     const source=e&&sources.find(s=>s.id===e.sourceId);
     if(!source||!e?.quote){warnings.push(`${label}: evidenza assente.`);return;}
-    if(['photo','video'].includes(source.kind)){warnings.push(`${label}: lettura visiva da verificare nella fonte.`);return;}
-    if(!norm(source.text).includes(norm(e.quote)))warnings.push(`${label}: citazione non riscontrata nella fonte.`);
+    if(['photo','video'].includes(source.kind)){visual.add(source.kind);return;}
+    if(!norm(evidenceText(source.text,source.kind)).includes(norm(evidenceText(e.quote,source.kind))))warnings.push(`${label}: citazione non riscontrata nella fonte.`);
   };
   for(const i of d.ingredients){check(i.evidence,i.name);if(i.quantity===null&&!/q\.?\s*b\.?|quanto basta|a piacere/i.test(i.originalText))warnings.push(`${i.name}: quantità non specificata.`);
     if(i.quantity!==null){
-      const numbers=evidenceNumbers(i.evidence.quote);
-      if(!numbers.some(n=>Math.abs(n-i.quantity!)<0.000001)||!norm(i.evidence.quote).includes(norm(i.name))||numbers.length>1)warnings.push(`${i.name}: verificare l’associazione tra ingrediente, dose e unità nella citazione.`);
-      const units=(norm(i.evidence.quote).match(/\p{L}+/gu)??[]).map(canonicalUnit);
+      const quote=quoteText(i.evidence),numbers=evidenceNumbers(quote);
+      if(!numbers.some(n=>Math.abs(n-i.quantity!)<0.000001)||!norm(quote).includes(norm(i.name))||numbers.length>1)warnings.push(`${i.name}: verificare l’associazione tra ingrediente, dose e unità nella citazione.`);
+      const units=(norm(quote).match(/\p{L}+/gu)??[]).map(canonicalUnit);
       if(i.unit&&!units.includes(canonicalUnit(i.unit)))warnings.push(`${i.name}: unità da verificare rispetto alla fonte.`);
     }
   }
   for(const s of d.steps){check(s.evidence,`Passaggio ${s.id}`);if(s.ingredientIds.some(id=>!ids.has(id)))blocking.push('Un passaggio cita un ingrediente inesistente.');}
   for(const [v,e,label] of [[d.servings,d.servingsEvidence,'Porzioni'],[d.prepMinutes,d.prepEvidence,'Preparazione'],[d.cookMinutes,d.cookEvidence,'Cottura']] as const)if(v!==null){
     check(e,label);
-    if(e){const values=label==='Porzioni'?evidenceNumbers(e.quote):minutesInQuote(e.quote);
+    if(e){const values=label==='Porzioni'?evidenceNumbers(quoteText(e)):minutesInQuote(quoteText(e));
       if(!values.some(n=>Math.abs(n-v)<0.000001))warnings.push(`${label}: valore numerico da verificare rispetto alla citazione.`);
     }
   }
+  if(visual.size)warnings.push(`${visual.has('photo')?'Foto':'Video'}: verifica ingredienti, dosi e passaggi nella fonte originale. La lettura visiva richiede conferma.`);
   if(d.servings===null)warnings.push('Numero di porzioni da specificare prima del ricalcolo.');
   if(d.prepMinutes===null)warnings.push('Tempo di preparazione non specificato.');
   if(d.cookMinutes===null)warnings.push('Tempo di cottura non specificato.');
