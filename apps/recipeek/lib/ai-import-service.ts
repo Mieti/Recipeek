@@ -249,9 +249,9 @@ export async function processImportJob(db:Database,id:string,owner:string,env:Im
     if(['analyze','analyzeTranscript','analyzeSupplement'].includes(j.status))j.usage.push({model:'gemini-3.8-flash',input:null,output:null,thought:null,outcome:'unknown'});else j.credits=null;
     j.status=j.draft?'ready':'failed';j.error='Operazione interrotta con esito incerto: non ripetiamo automaticamente la generazione a pagamento.';
   }
-  const lease=crypto.randomUUID();
+  const lease=crypto.randomUUID(),leaseMs=importPhotoPaths(j).length?90000:45000;
   // This single write serializes claims across all Worker instances, not just one batch.
-  const acquired=await db.prepare("UPDATE ai_imports SET lease=?,lease_until=? WHERE id=? AND owner_id=? AND updated_at=? AND lease_until<=? AND next_run_at<=? AND (SELECT count(*) FROM ai_imports WHERE lease IS NOT NULL AND lease_until>?)<2 AND (?=0 OR (SELECT count(*) FROM ai_imports WHERE lease IS NOT NULL AND lease_until>? AND (json_extract(document,'$.input.kind')='photos' OR json_extract(document,'$.hasPhotos')=1))<1)").bind(lease,now+45000,id,owner,r.updated_at,now,now,now,importPhotoPaths(j).length,now).run();
+  const acquired=await db.prepare("UPDATE ai_imports SET lease=?,lease_until=? WHERE id=? AND owner_id=? AND updated_at=? AND lease_until<=? AND next_run_at<=? AND (SELECT count(*) FROM ai_imports WHERE lease IS NOT NULL AND lease_until>?)<2 AND (?=0 OR (SELECT count(*) FROM ai_imports WHERE lease IS NOT NULL AND lease_until>? AND (json_extract(document,'$.input.kind')='photos' OR json_extract(document,'$.hasPhotos')=1))<1)").bind(lease,now+leaseMs,id,owner,r.updated_at,now,now,now,importPhotoPaths(j).length,now).run();
   if(!acquired.meta.changes)return {job:decode(await row(db,id,owner)),processed:false};
   let attempts=0,next=0;
   try{
@@ -282,7 +282,7 @@ export async function processImportJob(db:Database,id:string,owner:string,env:Im
     }
     else if(j.status==='transcript'&&e instanceof ProviderError&&[404,422].includes(e.providerStatus)&&!j.draft&&j.sources.some(s=>s.text.trim())){j.warnings.push('Trascrizione non disponibile: utilizziamo la descrizione.');j.status='analyzeTranscript';}
     else if(safePoll&&!(e instanceof HttpError&&[403,429].includes(e.status))&&(r.attempts??0)<2){attempts=(r.attempts??0)+1;next=Date.now()+60000*attempts;}
-    else{j.status=j.draft?'ready':'failed';j.error=e instanceof HttpError?e.message:'Importazione interrotta o risposta non valida. Nessun nuovo tentativo automatico.';}
+    else{j.status=j.draft?'ready':'failed';j.error=e instanceof HttpError?e.message:e instanceof Error&&['TimeoutError','AbortError'].includes(e.name)?'Il servizio AI non ha risposto entro il tempo disponibile. La fonte è conservata; non ripetiamo automaticamente un’analisi dal costo incerto.':'Importazione interrotta o risposta non valida. Nessun nuovo tentativo automatico.';}
   }
   if(['ready','failed'].includes(j.status)){j.completedAt??=new Date().toISOString();j.resultClassification=j.draft?.classification;}
   await db.prepare('UPDATE ai_imports SET status=?,document=?,updated_at=?,lease=NULL,lease_until=0,next_run_at=?,attempts=? WHERE id=? AND owner_id=? AND lease=?').bind(j.status,JSON.stringify(j),new Date().toISOString(),next,attempts,id,owner,lease).run();

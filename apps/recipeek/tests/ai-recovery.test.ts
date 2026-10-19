@@ -145,12 +145,12 @@ test('short promotional captions skip a wasted analysis and long pages keep the 
 
 test('monthly budget reservations are atomic, keep uncertain charges and count thinking exactly once',async()=>{
   const {db,sqlite}=fixture();try{
-    const limited={...env,RECIPEEK_AI_MONTHLY_BUDGET_USD:'2'};
+    const limited={...env,RECIPEEK_AI_MONTHLY_BUDGET_USD:'0.50'};
     const results=await Promise.allSettled([reserveImportBudget(db,'a','job-a','alice','gemini','analyze',limited),reserveImportBudget(db,'b','job-b','bob','gemini','analyze',limited)]);
     assert.equal(results.filter(r=>r.status==='fulfilled').length,1);
     const id=String(sqlite.prepare('SELECT id FROM ai_import_budget').get()?.id);
     await settleImportBudget(db,id,'gemini',true,{model:'gemini-3.8-flash',input:null,output:null,thought:null,outcome:'unknown'},null);
-    assert.equal(sqlite.prepare('SELECT charge FROM ai_import_budget WHERE id=?').get(id)?.charge,2_000_000);
+    assert.equal(sqlite.prepare('SELECT charge FROM ai_import_budget WHERE id=?').get(id)?.charge,500_000);
     await settleImportBudget(db,id,'gemini',true,{model:'gemini-3.8-flash',input:1000,output:200,thought:100,outcome:'invalid'},null);
     assert.equal(sqlite.prepare('SELECT charge FROM ai_import_budget WHERE id=?').get(id)?.charge,1875);
     await reserveImportBudget(db,'sup','job-a','alice','supadata','acquire',{...env,RECIPEEK_SUPADATA_MONTHLY_CREDITS:'1'});

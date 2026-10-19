@@ -12,7 +12,9 @@ export function importBudgetLimits(env:ImportEnv){return {gemini:configured(env.
 export async function reserveImportBudget(db:Database,id:string,job:string,owner:string,provider:'gemini'|'supadata',stage:string,env:ImportEnv,photos=true){
   const month=new Date().toISOString().slice(0,7),created=new Date().toISOString();
   // Unknown outcomes keep a conservative reservation. This is separate from the provider invoice.
-  const amount=provider==='gemini'?(photos?2_000_000:500_000):stage==='videoStart'?15:1;
+  // Same conservative $0.50 envelope for bounded text / up to four images.
+  // Do not rewrite old uncertain charges: only provider usage can reconcile them.
+  const amount=provider==='gemini'?500_000:stage==='videoStart'?15:1;
   const limit=provider==='gemini'?Math.floor(configured(env.RECIPEEK_AI_MONTHLY_BUDGET_USD,5,1000)*1_000_000):Math.floor(configured(env.RECIPEEK_SUPADATA_MONTHLY_CREDITS,100,100000));
   const result=await db.prepare('INSERT INTO ai_import_budget (id,job_id,owner_id,provider,month,charge,known,created_at) SELECT ?,?,?,?,?,?,0,? WHERE coalesce((SELECT sum(charge) FROM ai_import_budget WHERE provider=? AND month=?),0)+?<=?').bind(id,job,owner,provider,month,amount,created,provider,month,amount,limit).run();
   if(!result.meta.changes)throw new HttpError(429,provider==='gemini'?'Budget mensile AI raggiunto o impegnato in analisi dall’esito sconosciuto. La fonte è conservata.':'Quota mensile di acquisizione raggiunta o impegnata. La fonte è conservata.');

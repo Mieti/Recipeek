@@ -29,7 +29,7 @@ export default {
       };
     }
     const response = await withAccount(request,env,updated=>runWithConnectorBinding(binding, () => handler.fetch(updated, env, ctx)));
-    if(env.DB&&env.RECIPEEK_IMPORT_QUEUE_TOKEN&&request.method==='POST'&&path.startsWith('/api/ai-imports')&&response.ok)ctx.waitUntil(runImportQueue(env.DB,env,env.BUCKET).catch(()=>{console.error('Import queue kickoff failed');}));
+    if(env.DB&&env.RECIPEEK_IMPORT_QUEUE_TOKEN&&request.method==='POST'&&path.startsWith('/api/ai-imports')&&response.ok)ctx.waitUntil(runImportQueue(env.DB,env,env.BUCKET,fetch,false).catch(()=>{console.error('Import queue kickoff failed');}));
     return secureResponse(request, response);
   },
 };

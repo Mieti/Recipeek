@@ -22,9 +22,9 @@ Ingredienti id i1,i2, passaggi s1,s2. Collega solo ingredienti realmente usati. 
 Scrivi per chi sta cucinando: descrizione di una frase o vuota; procedimento conciso, normalmente 3–7 passaggi, una o due frasi operative ciascuno. Raggruppa operazioni consecutive della stessa fase senza perdere ordine, dosi parziali, tempi, temperature, riposi o istruzioni importanti. Mantieni più passaggi se necessari: non troncare una ricetta complessa. Niente introduzioni, ripetizioni o commenti sulla fonte nel procedimento. missing contiene solo lacune utili a preparare il piatto, non un elenco dei campi facoltativi vuoti. Evidenze minime ma sufficienti a sostenere tutti i dati citati.
 Suggerimenti FACOLTATIVI separati: normalmente 0–2, massimo 5, id p1,p2; target id ingrediente per quantity, id passaggio per text, recipe per servings/prepMinutes/cookMinutes. value è stringa (numero senza unità per valori numerici), reason spiega brevemente che è una proposta e la sua base. Proponi solo integrazioni utili a completare la preparazione, mai abbellimenti, dosi critiche prive di base, garanzie sanitarie, tempi sicuri di conservazione o identificazione di funghi. Non sostituire dati chiari della fonte. Se non puoi proporre responsabilmente lascia suggestions vuoto.`;
 
-export async function providerJson(url:string,init:RequestInit,fetcher:typeof fetch=fetch){
+export async function providerJson(url:string,init:RequestInit,fetcher:typeof fetch=fetch,timeoutMs=20000){
   // Workers reject redirect:'error'; manual keeps provider requests on the exact host.
-  const response=await fetcher(url,{...init,redirect:'manual',signal:AbortSignal.timeout(20000)});
+  const response=await fetcher(url,{...init,redirect:'manual',signal:AbortSignal.timeout(timeoutMs)});
   if(!response.ok&&response.status!==206){
     const retry=response.headers.get('retry-after'),seconds=retry===null?NaN:Number(retry);
     const retryAt=Number.isFinite(seconds)?Date.now()+Math.max(1,seconds)*1000:retry?Date.parse(retry):0;
@@ -44,7 +44,7 @@ export async function extractRecipe(env:ImportEnv,sources:ImportSource[],photos:
   const input:unknown[]=[{type:'text',text:JSON.stringify({sources:sources.map(({id,kind,text})=>({id,kind,text}))})}];
   for(const photo of photos)input.push({type:'text',text:`Fonte ${photo.id}`},{type:'image',mime_type:photo.mimeType,data:photo.data});
   let result:Awaited<ReturnType<typeof providerJson>>;
-  try{result=await providerJson('https://generativelanguage.googleapis.com/v1beta/interactions',{method:'POST',headers:{'content-type':'application/json','x-goog-api-key':env.GEMINI_API_KEY},body:JSON.stringify({model,input,system_instruction:importPrompt+' Usa citazioni brevi (massimo 320 caratteri), evitando ripetizioni. Non espandere il procedimento con dettagli assenti.',store:false,response_format:{type:'text',mime_type:'application/json',schema:extractionJsonSchema},generation_config:{max_output_tokens:8000,thinking_level:'low'}})},fetcher);}
+  try{result=await providerJson('https://generativelanguage.googleapis.com/v1beta/interactions',{method:'POST',headers:{'content-type':'application/json','x-goog-api-key':env.GEMINI_API_KEY},body:JSON.stringify({model,input,system_instruction:importPrompt+' Usa citazioni brevi (massimo 320 caratteri), evitando ripetizioni. Non espandere il procedimento con dettagli assenti.',store:false,response_format:{type:'text',mime_type:'application/json',schema:extractionJsonSchema},generation_config:{max_output_tokens:8000,thinking_level:'low'}})},fetcher,photos.length?50000:20000);}
   catch(error){onUsage?.({model,input:null,output:null,thought:null,outcome:error instanceof ProviderError&&error.providerStatus===429?'rejected':'unknown'});throw error;}
   const data=result.data&&typeof result.data==='object'?result.data:{};
   const tokens=(v:unknown)=>typeof v==='number'&&Number.isSafeInteger(v)&&v>=0?v:null;
