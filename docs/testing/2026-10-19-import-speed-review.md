@@ -4,7 +4,7 @@
 
 Versione Sites 21 pubblicata con esito `succeeded`, audience pubblica invariata e ambiente revisione 5. Commit sorgente Sites `ff9be504bc256c927a48fc1aff57543db79be11e`. URL: https://recipeek.muddydace3.chatgpt.site.
 
-Archivio `.local/recipeek-fast-import.tar.gz`, SHA256 `e8aa6e3a8c2ef5f258e005c7f24288a9360432d6c09528b6d9f74f4d2d25957f`. Nessuna migrazione, modifica dei budget o attivazione di nuovi provider.
+Archivio `.local/recipeek-fast-import.tar.gz`, SHA256 del file locale `33783fb33cd9bcc3df0a5adffe5be541e0da3bda72049bc0eb29f6111636d839`; content hash restituito da Sites `e8aa6e3a8c2ef5f258e005c7f24288a9360432d6c09528b6d9f74f4d2d25957f`. Nessuna migrazione, modifica dei budget o attivazione di nuovi provider.
 
 ## Controlli automatici
 
