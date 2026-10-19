@@ -37,4 +37,6 @@ Non sono stati testati tastiera fisica iOS o fotocamera in questo giro. Nessuna 
 
 ## Dati temporanei
 
-La revisione automatica ha richiesto consenso esplicito per eliminare l'account temporaneo e i dati di produzione. Il collaudo è stato completato conservandoli, senza riutilizzare account reali: due import e una ricetta privata `TEST AI · Import rapido`. La richiesta di pulizia è stata presentata all'utente separatamente dalla pubblicazione.
+La revisione automatica ha richiesto consenso esplicito per eliminare l'account temporaneo e i dati di produzione. Dopo il consenso dell'utente, la pulizia ha verificato UUID, email, data di creazione e proprietà dei dati: account Auth temporaneo eliminato, ricetta privata `TEST AI · Import rapido` eliminata anche dal cestino e import Instagram non salvato scartato. Verificati ricettario e cestino vuoti per il solo account temporaneo.
+
+Resta lo storico tecnico dell'import TikTok già salvato: l'API attuale non consente di scartare un import salvato. Non è stata eseguita una cancellazione diretta dei record tecnici nel database; la rimozione dell'account Auth non implica una cancellazione a cascata del database applicativo. Account e ricette reali non sono stati modificati.
