@@ -138,7 +138,7 @@ test('saved source photos can be released without touching recipe media; initial
 test('short promotional captions skip a wasted analysis and long pages keep the ingredient section',()=>{
   assert.equal(transcriptFirst('Pancakes fantastici! Seguimi per altre ricette'),true);
   assert.equal(transcriptFirst('Mescola yogurt e miele.'),false);
-  assert.equal(transcriptFirst('100 g yogurt, 1 cucchiaio miele.'),false);
+  assert.equal(transcriptFirst('100 g yogurt, 1 cucchiaio miele.'),true);
   const web='Introduzione e pubblicità.\n'.repeat(2000)+'# Ingredienti\n200 g pasta\n# Procedimento\nCuoci la pasta.';
   const selected=recipeTextWindow(web);assert.ok(selected.includes('200 g pasta'));assert.ok(selected.length<=24000);
 });

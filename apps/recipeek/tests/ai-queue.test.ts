@@ -58,7 +58,7 @@ test('token efficiency: equivalent text deduplicates, transcript repetition skip
     const a=await (await handleAiImport(request({kind:'text',text}),undefined,db,'alice',env)).json() as ImportJob;
     const b=await (await handleAiImport(request({kind:'text',text:text.replaceAll(' ','   ')}),undefined,db,'alice',env)).json() as ImportJob;assert.equal(a.id,b.id);
     const j:ImportJob={...a,input:{kind:'url',url:'https://instagram.com/reel/123'},draft,sources:[{id:'text-1',kind:'caption',text,label:'Descrizione'}],status:'transcript'};
-    await advanceImport(j,env,db,undefined,'alice',(async()=>Response.json({content:'200 g pasta'})) as typeof fetch);assert.equal(j.status,'ready');assert.ok(j.warnings.some(w=>w.includes('nessuna seconda chiamata')));
+    await advanceImport(j,env,db,undefined,'alice',(async()=>Response.json({content:'200 g pasta'})) as typeof fetch);assert.equal(j.status,'ready');assert.ok(j.warnings.some(w=>w.includes('un solo testo')));
     let payload:any;const result=await extractRecipe(env,j.sources,[],(async(_url:unknown,init:RequestInit)=>{payload=JSON.parse(init.body as string);return model();}) as typeof fetch);assert.equal(payload.generation_config.thinking_level,'low');assert.equal(result.usage.input,null);assert.equal(JSON.stringify(payload.input).includes('Descrizione'),false);
     const empty=await providerJson('https://provider.test',{},(async()=>new Response(null,{status:206})) as typeof fetch);assert.deepEqual(empty.data,{});
     assert.equal(publicImportUrl('https://instagram.com/reel/123?igsh=abc&utm_source=test').search,'');

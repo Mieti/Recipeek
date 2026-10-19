@@ -11,7 +11,20 @@ export async function runImportQueue(db:Database,env:ImportEnv,bucket?:R2Bucket,
   const due=await db.prepare(`SELECT id,owner_id,CASE WHEN json_extract(document,'$.hasPhotos')=1 THEN 'photos' ELSE json_extract(document,'$.input.kind') END AS kind FROM ai_imports WHERE status IN (${stages.map(()=>'?').join(',')}) AND lease_until<=? AND next_run_at<=? ORDER BY next_run_at,updated_at,id LIMIT 2`).bind(...stages,now,now).all<{id:string;owner_id:string;kind:string}>();
   // Never hold two sets of image buffers/base64 payloads in the same 128 MB isolate.
   const selected=due.results.every(r=>r.kind==='photos')?due.results.slice(0,1):due.results;
-  const results=await Promise.allSettled(selected.map(r=>processImportJob(db,r.id,r.owner_id,env,bucket,fetcher)));
+  const started=Date.now();
+  const results=await Promise.allSettled(selected.map(async r=>{
+    let processed=false;
+    // Start another phase only in the first three seconds. Provider requests have
+    // a 20-second timeout; don't exhaust the waitUntil/cron request lifetime.
+    for(let phase=0;phase<6;phase++){
+      const result=await processImportJob(db,r.id,r.owner_id,env,bucket,fetcher);
+      processed ||= result.processed;
+      if(!result.processed||!stages.includes(result.job.status)||Date.now()-started>=3000)break;
+      const due=await db.prepare('SELECT next_run_at FROM ai_imports WHERE id=? AND owner_id=?').bind(r.id,r.owner_id).first<{next_run_at:number}>();
+      if(!due||due.next_run_at>Date.now())break;
+    }
+    return {processed};
+  }));
   const failures=results.filter(r=>r.status==='rejected').length;
   if(failures)console.error('Import queue persistence failure',failures);
   return {processed:results.filter(r=>r.status==='fulfilled'&&r.value.processed).length,failures};

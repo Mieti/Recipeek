@@ -16,11 +16,18 @@ export const extractedSchema=z.object({
   suggestions:z.array(z.object({id:z.string().regex(/^p\d+$/),target:z.string().max(80),field:z.enum(['quantity','text','servings','prepMinutes','cookMinutes']),value:z.string().max(2000),reason:z.string().max(500)}).strict()).max(15),
 }).strict();
 export type Extraction=z.infer<typeof extractedSchema>;
+export function evidenceStatus(e:{sourceId:string;quote:string},sources:ImportSource[]):'matched'|'unmatched'|'visual'{
+  const source=sources.find(s=>s.id===e.sourceId);
+  if(!source||!e.quote.trim())return 'unmatched';
+  if(['photo','video'].includes(source.kind))return 'visual';
+  const plain=(text:string)=>norm(text.replace(/^\[\d+(?:\.\d+)?s\][ \t]*/gm,''));
+  return plain(source.text).includes(plain(e.quote))?'matched':'unmatched';
+}
 // Semantic classification is performed by the model; this independent gate prevents
 // an unsupported or structurally inconsistent answer from becoming a savable draft.
 export function guardExtraction(d:Extraction,sources:ImportSource[]):Extraction{
   const result=structuredClone(d);
-  const grounded=(e:{sourceId:string;quote:string})=>{const s=sources.find(s=>s.id===e.sourceId);return !!s&&!!e.quote.trim()&&(['photo','video'].includes(s.kind)||norm(s.text.replace(/^\[\d+(?:\.\d+)?s\][ \t]*/gm,'')).includes(norm(e.quote.replace(/^\[\d+(?:\.\d+)?s\][ \t]*/gm,''))));};
+  const grounded=(e:{sourceId:string;quote:string})=>evidenceStatus(e,sources)!=='unmatched';
   const ids=new Set(d.ingredients.map(i=>i.id));
   const consistent=ids.size===d.ingredients.length&&new Set(d.steps.map(s=>s.id)).size===d.steps.length&&new Set(d.suggestions.map(s=>s.id)).size===d.suggestions.length&&d.steps.every(s=>s.ingredientIds.every(id=>ids.has(id)))&&d.suggestions.every(s=>s.field==='quantity'?ids.has(s.target):s.field==='text'?d.steps.some(step=>step.id===s.target):s.target==='recipe');
   if(['recipe','partial_recipe'].includes(d.classification)){
@@ -121,6 +128,16 @@ export function recipeFromExtraction(d:Extraction,url=''):RecipeInput{
     ingredients:d.ingredients.map(i=>({id:i.id,name:i.name,quantity:i.quantity,quantityKind:i.quantity===null?(/q\.?\s*b\.?|quanto basta|a piacere/i.test(i.originalText)?"to_taste" as const:"unspecified" as const):undefined,unit:i.unit})),steps:d.steps.map(s=>({id:s.id,text:s.text,image:'',videoUrl:'',timerMinutes:0,ingredients:s.ingredientIds.map(ingredientId=>({ingredientId,quantity:null}))}))};
 }
 export type SuggestionDecision={id:string;status:'accepted'|'edited'|'rejected';value:string};
+export function decisionsForSave(recipe:RecipeInput,suggestions:Extraction['suggestions'],decisions:SuggestionDecision[]):SuggestionDecision[]{
+  return suggestions.map(s=>{
+    const decision=decisions.find(d=>d.id===s.id);
+    if(!decision||decision.status==='rejected')return {id:s.id,status:'rejected',value:s.value};
+    const actual=s.field==='quantity'?recipe.ingredients.find(i=>i.id===s.target)?.quantity:s.field==='text'?recipe.steps.find(step=>step.id===s.target)?.text:recipe[s.field];
+    if(actual===undefined||actual===null)return {id:s.id,status:'rejected',value:s.value};
+    const value=String(actual);
+    return {id:s.id,status:value===s.value?'accepted':'edited',value};
+  });
+}
 export function applySuggestion(recipe:RecipeInput,s:Extraction['suggestions'][number],value:string):RecipeInput{
   const r=structuredClone(recipe);
   const shape=recipeSchema.innerType().shape;

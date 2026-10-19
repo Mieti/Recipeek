@@ -1,6 +1,8 @@
 export function transcriptFirst(text:string){
   const value=text.trim();
-  return !value||value.length<160&&!/\d|ingredient|mescol|cuoc|tagli|aggiung|inforn|vers|friggi|boll|mix|bake|cook|chop|stir|add\b/i.test(value);
+  // A caption with amounts but no preparation cannot produce a complete recipe.
+  // Acquire the existing transcript before spending a model call on that fragment.
+  return !/mescol|cuoc|cuocer|cottura|tagli|aggiung|inforn|vers[ai]|friggi|boll|impast|frull|sciogl|rosol|condisci|riposa|lascia|amalgam|monta|scalda|mix|bake|cook|chop|stir|add\b|heat|combine|whisk|blend|simmer/i.test(value);
 }
 export function recipeTextWindow(text:string,limit=24000){
   if(text.length<=limit)return text;

@@ -11,7 +11,7 @@ import {importMetrics,isImportAdmin} from './ai-import-metrics.ts';
 import {importInputSchema,importReviewSchema,publicImportUrl,socialUrl,extractedSchema,guardExtraction,needsMore,validateExtraction,recipeFromExtraction,type ImportInput,type ImportSource,type Extraction} from './ai-import-model.ts';
 import {extractRecipe,supadata,importPrompt,extractionJsonSchema,ProviderError,ProviderWait,type ImportEnv,type Usage} from './ai-import-provider.ts';
 
-export type ImportJob={id:string;status:string;input:ImportInput;sources:ImportSource[];draft?:Extraction;candidate?:Extraction;integrationVersion?:number;supplementTimes?:string[];hasPhotos?:boolean;completedAt?:string;resultClassification?:string;warnings:string[];usage:Usage[];credits:number|null;duration?:number;videoJob?:string;transcriptJob?:string;polls:number;error?:string;createdAt:string;recipeId?:string;review?:unknown;videoAttempted?:boolean;reviewRevision?:string};
+export type ImportJob={id:string;status:string;input:ImportInput;sources:ImportSource[];draft?:Extraction;candidate?:Extraction;integrationVersion?:number;supplementTimes?:string[];hasPhotos?:boolean;completedAt?:string;resultClassification?:string;warnings:string[];usage:Usage[];credits:number|null;duration?:number;videoJob?:string;transcriptJob?:string;transcriptAttempted?:boolean;polls:number;error?:string;createdAt:string;recipeId?:string;review?:unknown;videoAttempted?:boolean;reviewRevision?:string};
 type Row={id:string;owner_id:string;status:string;document:string;created_at:string;updated_at:string;lease:string|null;lease_until:number;next_run_at:number;attempts:number;input_key:string|null;generation:number};
 const output=(body:unknown,status=200)=>Response.json(body,{status,headers:{'cache-control':'private, no-store'}});
 async function row(db:Database,id:string,owner:string){const r=await db.prepare('SELECT * FROM ai_imports WHERE id=? AND owner_id=?').bind(id,owner).first<Row>();if(!r)throw new HttpError(404,'Importazione non trovata.');return r;}
@@ -59,10 +59,11 @@ export async function advanceImport(j:ImportJob,env:ImportEnv,db:Database,bucket
     }
     j.draft=result.draft;j.reviewRevision=crypto.randomUUID();
     const more=needsMore(j.draft,j.sources)&&j.draft.classification!=='not_recipe';
-    if(more&&phase==='analyze'&&j.input.url&&socialUrl(j.input.url))j.status='transcript';
+    if(more&&phase==='analyze'&&!j.transcriptAttempted&&j.input.url&&socialUrl(j.input.url))j.status='transcript';
     else if(more&&videoAllowed(j,env))j.status='videoStart';
     else j.status='ready';
   }else if(j.status==='transcript'||j.status==='transcriptPoll'){
+    j.transcriptAttempted=true;
     const r=await supadata(env,j.status==='transcriptPoll'?`transcript/${encodeURIComponent(j.transcriptJob!)}`:'transcript',j.status==='transcript'?{url:j.input.url!,text:'false',mode:'native'}:{},undefined,fetcher);credit(j,r.credits);
     if(r.status===202){j.transcriptJob=z.string().min(1).max(200).parse(r.data.jobId);j.status='transcriptPoll';}
     else if(['queued','active','processing'].includes(r.data.status)){j.polls++;if(j.polls>=40)throw new HttpError(504,'Trascrizione ancora in lavorazione. Nessun nuovo job avviato.');}
@@ -72,10 +73,10 @@ export async function advanceImport(j:ImportJob,env:ImportEnv,db:Database,bucket
       if(text.trim()){
         const plain=cleanImportText(text.replace(/\[\d+(?:\.\d+)?s\] /g,''));
         const repeated=j.sources.some(s=>cleanImportText(s.text).toLocaleLowerCase('it').includes(plain.toLocaleLowerCase('it')));
-        if(repeated){j.warnings.push('La trascrizione ripete il testo già analizzato: nessuna seconda chiamata AI.');j.status=videoAllowed(j,env)?'videoStart':'ready';}
+        if(repeated){j.warnings.push('La trascrizione ripete la descrizione: viene analizzato un solo testo.');j.status=!j.draft?'analyzeTranscript':videoAllowed(j,env)?'videoStart':'ready';}
         else{j.sources.push({id:'transcript-1',kind:'transcript',text:boundedText(text),label:'Trascrizione disponibile'});if(text.length>24000)j.warnings.push('Trascrizione troncata: controllare la fonte.');j.status='analyzeTranscript';}
       }
-      else{j.warnings.push('Trascrizione esistente non disponibile. Nessun audio generato automaticamente.');j.status=videoAllowed(j,env)?'videoStart':'ready';}
+      else{j.warnings.push('Trascrizione esistente non disponibile. Nessun audio generato automaticamente.');j.status=!j.draft&&j.sources.some(s=>s.text.trim())?'analyzeTranscript':videoAllowed(j,env)?'videoStart':'ready';}
     }
   }else if(j.status==='videoStart'){
     if(!videoAllowed(j,env))throw new HttpError(400,'Analisi video disponibile solo se attivata e per video di durata nota entro 3 minuti.');
@@ -126,7 +127,14 @@ export async function handleAiImport(req:Request,id:string|undefined,db:Database
     const heartbeat=await db.prepare("SELECT last_tick FROM ai_queue_state WHERE id='imports'").first<{last_tick:number}>();
     return output(new URL(req.url).searchParams.get('progress')==='1'?{id:j.id,status:j.status,error:j.error,nextRunAt:r.next_run_at,lastTick:heartbeat?.last_tick??null,ready:['ready','saved','failed','discarded'].includes(j.status)}:view(j));
   }
-  const action=z.object({action:z.enum(['advance','deepen','save','review','discard','retry','removeSources','supplement','acceptCandidate','rejectCandidate']),revision:z.string().optional(),input:importInputSchema.optional(),recipe:importReviewSchema.optional(),decisions:z.array(z.object({id:z.string(),status:z.enum(['accepted','edited','rejected']),value:z.string().max(2000)})).max(15).optional(),reviewed:z.literal(true).optional(),servingsConfirmed:z.literal(true).optional(),confirmCost:z.literal(true).optional()}).parse(await readJsonBody(req));
+  const action=z.object({action:z.enum(['continue','advance','deepen','save','review','discard','retry','removeSources','supplement','acceptCandidate','rejectCandidate']),revision:z.string().optional(),input:importInputSchema.optional(),recipe:importReviewSchema.optional(),decisions:z.array(z.object({id:z.string(),status:z.enum(['accepted','edited','rejected']),value:z.string().max(2000)})).max(15).optional(),reviewed:z.literal(true).optional(),servingsConfirmed:z.literal(true).optional(),confirmCost:z.literal(true).optional()}).parse(await readJsonBody(req));
+  // A visible client can drive its own next phase without waiting for the cron.
+  // Same atomic lease, cooldown and budget reservations as the background worker.
+  if(action.action==='continue'){
+    await processImportJob(db,id,owner,env,bucket,fetcher);
+    const current=await row(db,id,owner);
+    return output({id,status:current.status,error:decode(current).error,nextRunAt:current.next_run_at,ready:['ready','saved','failed','discarded'].includes(current.status)});
+  }
   if(['supplement','acceptCandidate','rejectCandidate'].includes(action.action)){
     if(j.status!=='ready'||action.revision!==j.reviewRevision||r.lease_until>Date.now())throw new HttpError(409,'La bozza è cambiata o è in elaborazione. Riaprila.');
     const now=new Date().toISOString(),day=now.slice(0,10);
@@ -200,10 +208,9 @@ export async function handleAiImport(req:Request,id:string|undefined,db:Database
       if(actual!==expected)throw new HttpError(400,'Un campo suggerito è stato modificato: aggiorna la proposta e applicala prima di salvare.');
       if(d.status==='accepted'&&d.value!==s.value)throw new HttpError(400,'La proposta modificata deve essere indicata come modifica utente.');
     }
-    // The canonical recipe records an immutable import history, not a claim that later edits remain source-backed.
-    const history=['Importazione AI: revisione confermata dall’utente.',`Materiale analizzato: ${j.sources.map(s=>s.label).join(', ')}.`,...j.draft.suggestions.map(s=>{const d=decisions.find(d=>d.id===s.id)!;return `Suggerimento ${s.target}/${s.field}: ${d.status==='rejected'?'scartato':d.status==='edited'?'modificato dall’utente':'accettato'}${d.status==='rejected'?'':` (${d.value.slice(0,200)}${d.value.length>200?'…':''})`}.`;})].join('\n');
-    if((action.recipe.notes+'\n\n'+history).length>10000)throw new HttpError(400,'Accorcia le note per lasciare spazio alla provenienza dell’importazione.');
-    const recipe=recipeSchema.parse({...action.recipe,visibility:'private',notes:(action.recipe.notes+'\n\n'+history).trim()});
+    // Sources, original extraction and decisions remain in this private import.
+    // Keep the user's recipe notes free of machine-generated audit reports.
+    const recipe=recipeSchema.parse({...action.recipe,visibility:'private'});
     // AI import cannot attach another user's media or arbitrary URLs via the review payload.
     for(const path of [recipe.image,...recipe.steps.map(s=>s.image)].filter(p=>p.startsWith('/api/media/'))){const u=await readableUpload(db,path.split('/').at(-1)!,owner);if(!u||u.owner_id!==owner)throw new HttpError(400,'Foto non appartenente al tuo account.');}
     const locked=await db.prepare("UPDATE ai_imports SET status='saving',lease_until=? WHERE id=? AND owner_id=? AND status='ready' AND updated_at=? AND json_extract(document,'$.reviewRevision')=? AND lease_until<=?").bind(Date.now()+45000,id,owner,r.updated_at,action.revision,Date.now()).run();if(!locked.meta.changes)throw new HttpError(409,'Operazione già in corso o bozza cambiata. Riaprila.');
@@ -273,6 +280,7 @@ export async function processImportJob(db:Database,id:string,owner:string,env:Im
       const provider=['analyze','analyzeTranscript','analyzeSupplement'].includes(j.status)?'gemini':'supadata';
       await db.prepare('INSERT INTO ai_provider_state (id,next_at) VALUES (?,?) ON CONFLICT(id) DO UPDATE SET next_at=max(next_at,excluded.next_at)').bind(provider,next).run();
     }
+    else if(j.status==='transcript'&&e instanceof ProviderError&&[404,422].includes(e.providerStatus)&&!j.draft&&j.sources.some(s=>s.text.trim())){j.warnings.push('Trascrizione non disponibile: utilizziamo la descrizione.');j.status='analyzeTranscript';}
     else if(safePoll&&!(e instanceof HttpError&&[403,429].includes(e.status))&&(r.attempts??0)<2){attempts=(r.attempts??0)+1;next=Date.now()+60000*attempts;}
     else{j.status=j.draft?'ready':'failed';j.error=e instanceof HttpError?e.message:'Importazione interrotta o risposta non valida. Nessun nuovo tentativo automatico.';}
   }

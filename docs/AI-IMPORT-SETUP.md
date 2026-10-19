@@ -28,7 +28,7 @@ Il ricettario non viene salvato automaticamente dall’AI: al termine dell’ela
 
 Per verificare lo scheduler: controllare in Supabase Cron il job `recipeek-import-queue`, il suo stato attivo e gli esiti HTTP in `net._http_response`. Il heartbeat della coda è restituito dalla configurazione dell’importazione soltanto agli utenti autenticati. Evitare di stampare header, Vault o valori dei segreti.
 
-In locale il richiamo cloud punta esclusivamente alla produzione. Per provare le fasi locali, configurare un token locale distinto in `.dev.vars` e richiamare POST `http://127.0.0.1:5173/internal/import-queue` con il relativo bearer; ogni richiamo elabora al massimo una fase per due lavori. I test automatici non richiedono chiavi reali.
+In locale il richiamo cloud punta esclusivamente alla produzione. La pagina aperta può proseguire il proprio lavoro tramite POST `continue`, con gli stessi controlli della coda. Per provare il recupero a pagina chiusa, configurare un token locale distinto in `.dev.vars` e richiamare POST `http://127.0.0.1:5173/internal/import-queue` con il relativo bearer. Il batch seleziona due lavori e concatena le fasi immediatamente disponibili entro una finestra limitata; cooldown e attese remote restano rispettati. I test automatici non richiedono chiavi reali.
 
 Fonti ufficiali per verificare il contratto corrente: [Gemini Structured Outputs](https://ai.google.dev/gemini-api/docs/structured-output), [Supadata API](https://docs.supadata.ai/api-reference/introduction), [Supadata OpenAPI](https://docs.supadata.ai/api-reference/v1-openapi.json).
 
@@ -46,7 +46,7 @@ Il [collaudo social e foto del 19 ottobre](testing/2026-10-19-social-photo-impor
 
 ## Integrazioni e monitor
 
-Da una bozza pronta, “Completa con altro materiale” permette di aggiungere testo o foto della stessa ricetta. La nuova analisi viene mostrata separatamente: occorre integrare o scartare i risultati. Le correzioni manuali e un procedimento già presente restano conservati. Massimo tre integrazioni per bozza, quattro foto complessive; ogni integrazione conta nelle quote giornaliere e nei budget esistenti.
+Da una bozza pronta, “Mancano informazioni? Aggiungi testo o foto” permette di aggiungere materiale della stessa ricetta. La nuova analisi viene mostrata separatamente: occorre integrare o scartare i risultati. Le correzioni manuali e un procedimento già presente restano conservati. Massimo tre integrazioni per bozza, quattro foto complessive; ogni integrazione conta nelle quote giornaliere e nei budget esistenti.
 
 `RECIPEEK_IMPORT_ADMIN_PROFILES` contiene soltanto ID profilo Recipeek, separati da virgole, autorizzati a leggere `/import/monitor`. Va configurata nel runtime server, mai da metadati modificabili dell'utente. Senza questa variabile nessun account può leggere il monitor. In produzione è stato abilitato il solo profilo del proprietario.
 
