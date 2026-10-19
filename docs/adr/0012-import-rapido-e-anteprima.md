@@ -20,4 +20,6 @@ La superficie iniziale è una ricetta leggibile, con ingredienti e procedimento.
 
 Autosalvataggio serializzato e revisione ottimistica rimangono attivi. I candidati di integrazione richiedono ancora una scelta prima del salvataggio, per non perdere correzioni. Il report delle fonti è chiuso in fondo: distingue riscontro letterale, citazione non riscontrata e lettura visiva. Un riscontro letterale non certifica l'associazione semantica tra ingrediente, dose e unità.
 
+Aggiornamento UX del 19 ottobre: “Modifica ricetta” separa Ingredienti, Passaggi e Dettagli. Le liste mostrano righe sintetiche e aprono un solo elemento per volta; i passaggi mantengono il testo completo nel campo di modifica. I collegamenti degli ingredienti restano sotto un'ulteriore espansione. Rimozione annullabile nell'editor corrente, riordino tramite pulsanti accessibili e focus restituito alla riga; nessun gesto nascosto indispensabile. Campi da 16 px, controlli touch di almeno 44 px e navigazione delle sezioni non sovrapposta alla tastiera. Il componente aggiorna la stessa bozza, senza cambiare salvataggio, validazione o semantica dei suggerimenti AI.
+
 La cronologia tecnica rimane nel documento privato dell'importazione. Non viene più aggiunta alle note personali della ricetta. Nessuna modifica retroattiva delle ricette già salvate.
