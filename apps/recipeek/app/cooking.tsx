@@ -7,6 +7,7 @@ import {adjacentStep,stepTapDirection,type StepTap} from '../lib/cooking-navigat
 import {removeKitchenState,writeKitchenState} from '../lib/kitchen-state';
 import StepTimer from './step-timer';
 import Modal from './modal';
+import './recipe-flows.css';
 
 export default function Cooking({initial,userId,onExit}:{initial:{recipe:Recipe;servings:number;factor:number;step:number};userId:string;onExit:(done?:boolean)=>void}){
   const r=initial.recipe,[index,setIndex]=useState(Math.min(initial.step,r.steps.length-1)),[done,setDone]=useState(false),[wake,setWake]=useState(false),[ingredientsOpen,setIngredientsOpen]=useState(false);
@@ -33,15 +34,15 @@ export default function Cooking({initial,userId,onExit}:{initial:{recipe:Recipe;
     const direction=stepTapDirection(start,{x:event.clientX-rect.left,y:event.clientY,time:performance.now(),scroll:scroll.current?.scrollTop??0},rect.width,interactive(event.target)||Boolean(window.getSelection()?.toString()));if(direction)go(direction);
   }
   function finish(){removeKitchenState(sessionKey);setDone(true);}
-  return <div className="focus-cooking">
-    <header className="focus-header"><button className="focus-exit" onClick={()=>onExit(done)} aria-label="Esci dalla modalità cooking"><ArrowLeft size={19}/><span>Ricettario</span></button><div className="focus-recipe"><strong>{r.title}</strong></div><span className={`focus-wake ${wake?'is-on':''}`} title={wake?'Lo schermo rimane acceso finché il browser lo consente':'Lo schermo può spegnersi'}><Sun size={17}/><span>{wake?'Schermo attivo':'Cooking'}</span></span></header>
+  return <div className="recipe-flow-cooking focus-cooking">
+    <header className="focus-header"><button className="focus-exit" onClick={()=>onExit(done)} aria-label="Esci dalla modalità cooking e torna a Ricette"><ArrowLeft size={19}/><span>Ricette</span></button><div className="focus-recipe"><strong>{r.title}</strong></div><span className={`focus-wake ${wake?'is-on':''}`} title={wake?'Lo schermo rimane acceso finché il browser lo consente':'Lo schermo può spegnersi'}><Sun size={17}/><span>{wake?'Schermo attivo':'In cucina'}</span></span></header>
     <div className="focus-progress" role="progressbar" aria-label="Avanzamento della ricetta" aria-valuemin={0} aria-valuemax={r.steps.length} aria-valuenow={done?r.steps.length:index+1}><span style={{width:`${done?100:(index+1)/r.steps.length*100}%`}}/></div>
-    {done?<main className="focus-finished"><div className="focus-finished-icon"><ChefHat size={44} strokeWidth={1.4}/></div><p className="eyebrow">FATTO CON LE TUE MANI</p><h1>A tavola.</h1><p>Hai completato {r.title}. Buon appetito!</p><button className="button primary" onClick={()=>onExit(true)}>Torna al ricettario<CheckCheck size={18}/></button></main>:<>
+    {done?<main className="focus-finished"><div className="focus-finished-icon"><ChefHat size={44} strokeWidth={1.4}/></div><p className="eyebrow">RICETTA COMPLETATA</p><h1>Pronta.</h1><p>Hai completato {r.title}. Buon appetito!</p><button className="button primary" onClick={()=>onExit(true)}>Torna a Ricette<CheckCheck size={18}/></button></main>:<>
       <div className="focus-stage" ref={stage} onPointerDown={down} onPointerUp={up} onPointerCancel={()=>{gesture.current=null;}}>
         <button className="focus-side previous" aria-label="Passaggio precedente" aria-controls="focused-step" disabled={index===0} onClick={()=>go('previous')}><ChevronLeft size={24}/></button>
         <div className="focus-stage-scroll" ref={scroll}>
           <main className={`focus-step ${step.image?'with-photo':''}`} id="focused-step" key={step.id}>
-            <div className="focus-step-top"><span className="focus-step-number">{String(index+1).padStart(2,'0')}</span><div><p className="eyebrow">{index===0?'SI COMINCIA':last?'IL TOCCO FINALE':'UN PASSAGGIO ALLA VOLTA'}</p><p className="focus-step-count" aria-live="polite">Passaggio {index+1} di {r.steps.length}</p></div></div>
+            <div className="focus-step-top"><span className="focus-step-number">{String(index+1).padStart(2,'0')}</span><div><p className="eyebrow">{index===0?'INIZIO':last?'ULTIMO PASSAGGIO':'PREPARAZIONE'}</p><p className="focus-step-count" aria-live="polite">Passaggio {index+1} di {r.steps.length}</p></div></div>
             <h1 ref={heading} tabIndex={-1}>{step.text}</h1>
             {step.image&&<img className="focus-step-photo" src={step.image} alt={`Foto del passaggio ${index+1}`} draggable={false}/>}
             {step.ingredients.length>0&&<section className="focus-step-ingredients" aria-label="Ingredienti di questo passaggio"><p className="eyebrow">TI SERVE ADESSO</p><div>{step.ingredients.map(use=>{const ingredient=r.ingredients.find(item=>item.id===use.ingredientId);if(!ingredient)return null;return <span className="focus-ingredient" key={ingredient.id}><span>{ingredient.name}</span>{use.quantity!==null?<strong>{formatQuantity(use.quantity,initial.factor)} {formatUnit(ingredient.unit,use.quantity*initial.factor)}</strong>:ingredient.quantity===null?<strong>{formatIngredientQuantity(ingredient,initial.factor)}</strong>:null}</span>;})}</div></section>}
@@ -51,8 +52,8 @@ export default function Cooking({initial,userId,onExit}:{initial:{recipe:Recipe;
         </div>
         <button className="focus-side next" aria-label="Passaggio successivo" aria-controls="focused-step" disabled={last} onClick={()=>go('next')}><ChevronRight size={24}/></button>
       </div>
-      <footer className="focus-footer"><button className="focus-ingredients-button" onClick={()=>setIngredientsOpen(true)}><Leaf size={19}/><span>Tutte le dosi<small>{initial.servings} persone{initial.factor!==1?' · dosi ricalcolate':''}</small></span></button><p>Tocca a sinistra per tornare,<br/>a destra per continuare.</p><button className="button primary" onClick={()=>last?finish():go('next')}>{last?'Ho finito':'Avanti'}{last?<Check size={19}/>:<ChevronRight size={19}/>}</button></footer>
+      <footer className="focus-footer"><button className="focus-ingredients-button" onClick={()=>setIngredientsOpen(true)}><Leaf size={19}/><span>Tutte le dosi<small>{initial.servings} persone{initial.factor!==1?' · dosi ricalcolate':''}</small></span></button><p>Passaggio precedente · successivo</p><button className="button primary" onClick={()=>last?finish():go('next')}>{last?'Ho finito':'Avanti'}{last?<Check size={19}/>:<ChevronRight size={19}/>}</button></footer>
     </>}
-    {ingredientsOpen&&<Modal label="Ingredienti della sessione" onClose={()=>setIngredientsOpen(false)}><h2>Le dosi, tutte qui.</h2><p>{r.title} · {initial.servings} persone{initial.factor!==1?' · dosi ricalcolate':''}</p><div className="focus-all-ingredients">{r.ingredients.map(ingredient=><div key={ingredient.id}><span>{ingredient.name}</span><strong>{formatIngredientQuantity(ingredient,initial.factor)} {formatUnit(ingredient.unit,ingredient.quantity===null?null:ingredient.quantity*initial.factor)}</strong></div>)}</div><button className="button primary" onClick={()=>setIngredientsOpen(false)}>Torna al passaggio<ChevronRight size={18}/></button></Modal>}
+    {ingredientsOpen&&<Modal label="Ingredienti della sessione" onClose={()=>setIngredientsOpen(false)}><h2>Dosi per questa sessione</h2><p>{r.title} · {initial.servings} persone{initial.factor!==1?' · dosi ricalcolate':''}</p><div className="focus-all-ingredients">{r.ingredients.map(ingredient=><div key={ingredient.id}><span>{ingredient.name}</span><strong>{formatIngredientQuantity(ingredient,initial.factor)} {formatUnit(ingredient.unit,ingredient.quantity===null?null:ingredient.quantity*initial.factor)}</strong></div>)}</div><button className="button primary" onClick={()=>setIngredientsOpen(false)}>Torna al passaggio<ChevronRight size={18}/></button></Modal>}
   </div>;
 }

@@ -1,0 +1,628 @@
+/* Shared visual language for recipe import and focused cooking. */
+.recipe-flow-import.import-page {
+  --flow-bg: var(--bg, #f7f4ed);
+  --flow-paper: var(--paper, #fffefa);
+  --flow-ink: var(--ink, #252a24);
+  --flow-muted: var(--muted, #73786f);
+  --flow-line: var(--line, #e5dfd3);
+  --flow-green: var(--green, #315a44);
+  --flow-green-light: var(--green-light, #e8eee6);
+  --flow-terra: var(--terra, #b66a50);
+  min-height: 100dvh;
+  padding: max(22px, env(safe-area-inset-top)) 24px max(52px, env(safe-area-inset-bottom));
+  color: var(--flow-ink);
+}
+
+.recipe-flow-import .import-header {
+  max-width: 860px;
+  margin: 0 auto;
+  padding-bottom: 17px;
+  border-bottom: 1px solid var(--flow-line);
+}
+
+.recipe-flow-import .import-header .brand {
+  color: var(--flow-ink);
+  font-size: 26px;
+}
+
+.recipe-flow-import .import-header .brand > span {
+  color: var(--terra, #b66a50);
+  font-size: 35px;
+}
+
+.recipe-flow-import .import-header .button {
+  min-height: 44px;
+  border-color: var(--flow-line);
+  border-radius: 999px;
+  background: var(--flow-paper);
+  color: var(--flow-ink);
+}
+
+.recipe-flow-import .import-intro {
+  max-width: 780px;
+  margin: clamp(30px, 5vh, 52px) auto 22px;
+}
+
+.recipe-flow-import .import-intro h1 {
+  margin: 0;
+  color: var(--flow-ink);
+  font-size: clamp(32px, 5vw, 48px);
+  letter-spacing: -1.1px;
+  line-height: 1.12;
+}
+
+.recipe-flow-import .text-button {
+  min-height: 44px;
+  color: var(--flow-green);
+}
+
+.recipe-flow-import > .text-button {
+  display: flex;
+  width: fit-content;
+  max-width: 780px;
+  margin: 0 auto 10px;
+}
+
+.recipe-flow-import > .import-card,
+.recipe-flow-import > .import-review {
+  max-width: 780px;
+  margin: 0 auto 24px;
+  padding: clamp(20px, 4vw, 32px);
+  border: 1px solid var(--flow-line);
+  border-radius: 18px;
+  background: var(--flow-paper);
+  box-shadow: 0 12px 36px #302b1d08;
+}
+
+.recipe-flow-import > .import-review {
+  max-width: 820px;
+}
+
+.recipe-flow-import .import-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+  margin: 0 0 22px;
+  padding: 4px;
+  border: 1px solid var(--flow-line);
+  border-radius: 13px;
+  background: var(--flow-bg);
+}
+
+.recipe-flow-import .import-tabs button {
+  min-width: 0;
+  min-height: 48px;
+  justify-content: center;
+  padding: 9px 10px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  color: var(--flow-muted);
+  font-size: 13px;
+  font-weight: 600;
+  transition: background-color .16s ease, color .16s ease, box-shadow .16s ease;
+}
+
+.recipe-flow-import .import-tabs button[aria-pressed="true"] {
+  border-color: var(--flow-line);
+  background: var(--flow-paper);
+  color: var(--flow-green);
+  box-shadow: 0 1px 3px #252a2410;
+}
+
+.recipe-flow-import .import-card label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin: 16px 0;
+  color: var(--flow-ink);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.recipe-flow-import .import-card input:not([type="checkbox"]):not([type="file"]),
+.recipe-flow-import .import-card textarea,
+.recipe-flow-import .import-card select {
+  width: 100%;
+  min-width: 0;
+  min-height: 48px;
+  padding: 11px 13px;
+  border: 1px solid var(--flow-line);
+  border-radius: 10px;
+  background: var(--flow-paper);
+  color: var(--flow-ink);
+  font-size: 16px;
+}
+
+.recipe-flow-import .import-card textarea {
+  min-height: 190px;
+  line-height: 1.6;
+}
+
+.recipe-flow-import .import-card input[type="file"] {
+  width: 100%;
+  min-height: 44px;
+  color: var(--flow-ink);
+  font-size: 14px;
+}
+
+.recipe-flow-import .import-card small {
+  color: var(--flow-muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.recipe-flow-import .import-upload {
+  padding: 16px;
+  border: 1px dashed #b8c7b5;
+  border-radius: 12px;
+  background: var(--flow-bg);
+}
+
+.recipe-flow-import .import-upload span {
+  display: block;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.recipe-flow-import .import-card > .muted {
+  margin: 18px 0;
+  color: var(--flow-muted);
+  font-size: 12px;
+}
+
+.recipe-flow-import .import-card > .button.primary,
+.recipe-flow-import .recipe-confirm > .button.primary {
+  min-height: 48px;
+  border-radius: 10px;
+  background: var(--flow-green);
+  border-color: var(--flow-green);
+  font-size: 14px;
+  white-space: normal;
+}
+
+.recipe-flow-import .import-notice {
+  margin: 18px 0;
+  padding: 14px 16px;
+  border: 1px solid #e6d7bd;
+  border-radius: 12px;
+  background: #f8f1e5;
+  color: #584936;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.recipe-flow-import .import-history {
+  max-width: 780px;
+  margin: 34px auto 0;
+}
+
+.recipe-flow-import .import-history h2 {
+  margin-bottom: 8px;
+  color: var(--flow-ink);
+  font-size: 22px;
+  letter-spacing: -.3px;
+}
+
+.recipe-flow-import .import-history > button {
+  min-height: 68px;
+  padding: 13px 6px;
+  border-bottom: 1px solid var(--flow-line);
+  color: var(--flow-ink);
+  text-align: left;
+}
+
+.recipe-flow-import .import-history > button > span {
+  min-width: 0;
+}
+
+.recipe-flow-import .import-history strong {
+  display: block;
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recipe-flow-import .import-history small {
+  color: var(--flow-muted);
+  font-size: 12px;
+}
+
+.recipe-flow-import .import-activity {
+  min-height: min(580px, calc(100svh - 150px));
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.recipe-flow-import .import-activity > .spinner {
+  width: 26px;
+  height: 26px;
+  border-color: var(--flow-green-light);
+  border-top-color: var(--flow-green);
+}
+
+.recipe-flow-import .import-activity h2,
+.recipe-flow-import .import-card h2 {
+  color: var(--flow-ink);
+  font-size: clamp(24px, 4vw, 32px);
+  letter-spacing: -.5px;
+}
+
+.recipe-flow-import .import-activity p,
+.recipe-flow-import .import-card > p:not(.muted) {
+  color: var(--flow-muted);
+  line-height: 1.65;
+}
+
+.recipe-flow-import .button-row {
+  gap: 10px;
+}
+
+.recipe-flow-import .button-row .button,
+.recipe-flow-import .button-row .text-button {
+  min-height: 44px;
+  white-space: normal;
+}
+
+.recipe-flow-import .import-review {
+  color: var(--flow-ink);
+}
+
+.recipe-flow-import .recipe-preview-heading h2 {
+  margin: 10px 0;
+  color: var(--flow-ink);
+  font-size: clamp(30px, 5vw, 44px);
+  line-height: 1.15;
+}
+
+.recipe-flow-import .recipe-preview-heading > p:not(.eyebrow) {
+  color: var(--flow-muted);
+}
+
+.recipe-flow-import .recipe-preview-meta > span {
+  min-height: 32px;
+  background: var(--flow-green-light);
+  color: var(--flow-green);
+}
+
+.recipe-flow-import .recipe-preview-content h3 {
+  color: var(--flow-ink);
+  font-size: 24px;
+}
+
+.recipe-flow-import .recipe-preview-ingredients li {
+  border-color: var(--flow-line);
+  color: var(--flow-ink);
+}
+
+.recipe-flow-import .recipe-preview-ingredients strong {
+  color: var(--flow-green);
+}
+
+.recipe-flow-import .recipe-preview-steps li > span {
+  background: var(--flow-green-light);
+  color: var(--flow-green);
+}
+
+.recipe-flow-import .import-checks {
+  border-left-color: var(--flow-terra);
+  background: #f8f1e8;
+  color: var(--flow-ink);
+}
+
+.recipe-flow-import .import-review details {
+  border-color: var(--flow-line);
+}
+
+.recipe-flow-import .import-review summary {
+  min-height: 44px;
+  padding: 11px 12px;
+  border-radius: 10px;
+  background: var(--flow-bg);
+  color: var(--flow-ink);
+}
+
+.recipe-flow-import .import-review details.recipe-edit > summary {
+  border-color: var(--flow-line);
+  background: var(--flow-paper);
+  color: var(--flow-green);
+}
+
+.recipe-flow-import .import-review .draft-editor summary {
+  background: transparent;
+  color: var(--flow-green);
+}
+
+.recipe-flow-import .import-review .draft-editor .draft-entry-list {
+  border-color: var(--flow-line);
+  background: var(--flow-paper);
+}
+
+.recipe-flow-import .import-review .draft-segments {
+  background: var(--flow-bg);
+}
+
+.recipe-flow-import .import-review .draft-segments button[aria-pressed="true"] {
+  color: var(--flow-green);
+}
+
+.recipe-flow-import .import-suggestions,
+.recipe-flow-import .import-suggestion {
+  border: 1px solid var(--flow-line);
+  border-radius: 13px;
+  background: var(--flow-bg);
+}
+
+.recipe-flow-import .import-suggestion {
+  padding: 16px;
+}
+
+.recipe-flow-import .import-review .import-suggestions > summary {
+  background: var(--flow-bg);
+}
+
+.recipe-flow-import .import-sources pre {
+  border-radius: 10px;
+  background: var(--flow-bg);
+  color: var(--flow-ink);
+}
+
+.recipe-flow-import .import-source-photo {
+  margin-top: 12px;
+  border-radius: 10px;
+}
+
+.recipe-flow-import .recipe-confirm {
+  border-color: var(--flow-line);
+}
+
+.recipe-flow-import .recipe-confirm p,
+.recipe-flow-import .recipe-confirm small {
+  color: var(--flow-muted);
+}
+
+.recipe-flow-import .import-review-body:disabled {
+  opacity: .75;
+}
+
+.recipe-flow-cooking.focus-cooking {
+  background: var(--bg, #f7f4ed);
+  color: var(--ink, #252a24);
+}
+
+.recipe-flow-cooking .focus-header {
+  border-bottom: 1px solid var(--line, #e5dfd3);
+  color: var(--ink, #252a24);
+}
+
+.recipe-flow-cooking .focus-exit {
+  min-height: 44px;
+  border-radius: 9px;
+  color: var(--green, #315a44);
+}
+
+.recipe-flow-cooking .focus-exit:hover,
+.recipe-flow-cooking .focus-side:not(:disabled):hover {
+  background: var(--green-light, #e8eee6);
+}
+
+.recipe-flow-cooking .focus-recipe strong {
+  color: var(--ink, #252a24);
+  font-size: 14px;
+}
+
+.recipe-flow-cooking .focus-wake {
+  color: var(--muted, #73786f);
+}
+
+.recipe-flow-cooking .focus-wake.is-on {
+  color: var(--green, #315a44);
+}
+
+.recipe-flow-cooking .focus-progress {
+  height: 4px;
+  background: var(--green-light, #e8eee6);
+}
+
+.recipe-flow-cooking .focus-progress > span {
+  background: var(--green, #315a44);
+}
+
+.recipe-flow-cooking .focus-step-number {
+  color: var(--terra, #b66a50);
+}
+
+.recipe-flow-cooking .focus-step-top .eyebrow,
+.recipe-flow-cooking .focus-step-ingredients > .eyebrow {
+  color: var(--green, #315a44);
+}
+
+.recipe-flow-cooking .focus-step-count {
+  color: var(--muted, #73786f);
+}
+
+.recipe-flow-cooking .focus-step h1 {
+  color: var(--ink, #252a24);
+}
+
+.recipe-flow-cooking .focus-step-photo {
+  border-radius: 13px;
+}
+
+.recipe-flow-cooking .focus-step-ingredients {
+  border-color: var(--line, #e5dfd3);
+}
+
+.recipe-flow-cooking .focus-ingredient {
+  border-color: var(--line, #e5dfd3);
+  background: var(--paper, #fffefa);
+  color: var(--ink, #252a24);
+}
+
+.recipe-flow-cooking .focus-ingredient strong {
+  color: var(--green, #315a44);
+}
+
+.recipe-flow-cooking .focus-side {
+  min-width: 44px;
+  color: var(--green, #315a44);
+}
+
+.recipe-flow-cooking .focus-step .cooking-timer {
+  border-color: var(--line, #e5dfd3);
+  background: var(--paper, #fffefa);
+  color: var(--ink, #252a24);
+}
+
+.recipe-flow-cooking .focus-video {
+  min-height: 44px;
+  color: var(--green, #315a44);
+}
+
+.recipe-flow-cooking .focus-footer {
+  border-top: 1px solid var(--line, #e5dfd3);
+}
+
+.recipe-flow-cooking .focus-footer > p {
+  color: var(--muted, #73786f);
+}
+
+.recipe-flow-cooking .focus-ingredients-button {
+  min-height: 44px;
+  color: var(--green, #315a44);
+}
+
+.recipe-flow-cooking .focus-ingredients-button small {
+  color: var(--muted, #73786f);
+}
+
+.recipe-flow-cooking .focus-footer .button.primary,
+.recipe-flow-cooking .focus-finished .button.primary,
+.recipe-flow-cooking .modal .button.primary {
+  min-height: 44px;
+  border-radius: 10px;
+  background: var(--green, #315a44);
+  border-color: var(--green, #315a44);
+}
+
+.recipe-flow-cooking .focus-finished {
+  color: var(--ink, #252a24);
+}
+
+.recipe-flow-cooking .focus-finished-icon {
+  background: var(--green-light, #e8eee6);
+  color: var(--green, #315a44);
+}
+
+.recipe-flow-cooking .focus-finished > .eyebrow {
+  color: var(--green, #315a44);
+}
+
+.recipe-flow-cooking .focus-finished > p:not(.eyebrow) {
+  color: var(--muted, #73786f);
+}
+
+.recipe-flow-cooking .modal {
+  background: var(--bg, #f7f4ed);
+  color: var(--ink, #252a24);
+}
+
+.recipe-flow-cooking .modal > p {
+  color: var(--muted, #73786f);
+}
+
+.recipe-flow-cooking .focus-all-ingredients > div {
+  border-color: var(--line, #e5dfd3);
+}
+
+@media (max-width: 600px) {
+  .recipe-flow-import.import-page {
+    padding: max(16px, env(safe-area-inset-top)) 16px max(32px, env(safe-area-inset-bottom));
+  }
+
+  .recipe-flow-import .import-header {
+    padding-bottom: 13px;
+  }
+
+  .recipe-flow-import .import-header .brand {
+    font-size: 24px;
+  }
+
+  .recipe-flow-import .import-intro {
+    margin: 30px auto 18px;
+  }
+
+  .recipe-flow-import .import-intro h1 {
+    font-size: 34px;
+  }
+
+  .recipe-flow-import > .import-card,
+  .recipe-flow-import > .import-review {
+    padding: 20px 16px;
+    border-radius: 15px;
+  }
+
+  .recipe-flow-import .import-tabs {
+    gap: 3px;
+  }
+
+  .recipe-flow-import .import-tabs button {
+    min-height: 46px;
+    gap: 5px;
+    padding-inline: 5px;
+    font-size: 12px;
+  }
+
+  .recipe-flow-import .import-card textarea {
+    min-height: 160px;
+  }
+
+  .recipe-flow-import .import-activity {
+    min-height: max(340px, calc(100svh - 190px));
+  }
+
+  .recipe-flow-import .import-history {
+    margin-top: 28px;
+  }
+
+  .recipe-flow-import .import-review .draft-section-heading {
+    align-items: flex-start;
+  }
+
+  .recipe-flow-import .recipe-confirm {
+    padding-bottom: 12px;
+  }
+
+  .recipe-flow-cooking .focus-header {
+    padding-inline: max(16px, env(safe-area-inset-left)) max(16px, env(safe-area-inset-right));
+  }
+
+  .recipe-flow-cooking .focus-step {
+    padding-top: 24px;
+    padding-bottom: 28px;
+  }
+
+  .recipe-flow-cooking .focus-footer {
+    padding-left: max(17px, env(safe-area-inset-left));
+    padding-right: max(17px, env(safe-area-inset-right));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .recipe-flow-import .import-tabs button,
+  .recipe-flow-import .button,
+  .recipe-flow-import .draft-entry-toggle > svg,
+  .recipe-flow-cooking .button,
+  .recipe-flow-cooking .focus-progress > span {
+    transition: none;
+  }
+
+  .recipe-flow-cooking .focus-step {
+    animation: none;
+  }
+}

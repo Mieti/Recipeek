@@ -2,7 +2,7 @@
 import {useEffect,useRef,type ReactNode} from 'react';
 import {X} from 'lucide-react';
 
-export default function Modal({children,onClose,label,wide=false}:{children:ReactNode;onClose:()=>void;label:string;wide?:boolean}){
+export default function Modal({children,onClose,label,wide=false,className=''}:{children:ReactNode;onClose:()=>void;label:string;wide?:boolean;className?:string}){
   const ref=useRef<HTMLDivElement>(null),close=useRef(onClose);close.current=onClose;
   useEffect(()=>{
     const previous=document.activeElement as HTMLElement|null,old=document.body.style.overflow;
@@ -18,5 +18,5 @@ export default function Modal({children,onClose,label,wide=false}:{children:Reac
     document.addEventListener('keydown',key);
     return()=>{document.body.style.overflow=old;document.removeEventListener('keydown',key);previous?.focus({preventScroll:true});};
   },[]);
-  return <div className="overlay" onMouseDown={event=>{if(event.target===event.currentTarget)onClose();}}><div className={`modal ${wide?'wide':''}`} role="dialog" aria-modal="true" aria-label={label} tabIndex={-1} ref={ref}><div className="modal-top"><span className="eyebrow">{label}</span><button className="icon-button" aria-label="Chiudi" onClick={onClose}><X size={20}/></button></div>{children}</div></div>;
+  return <div className="overlay" onMouseDown={event=>{if(event.target===event.currentTarget)onClose();}}><div className={`modal ${wide?'wide':''} ${className}`.trim()} role="dialog" aria-modal="true" aria-label={label} tabIndex={-1} ref={ref}><div className="modal-top"><span className="eyebrow">{label}</span><button className="icon-button" aria-label="Chiudi" onClick={onClose}><X size={20}/></button></div>{children}</div></div>;
 }

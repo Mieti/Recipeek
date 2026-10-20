@@ -8,7 +8,7 @@ Il logout era disponibile soltanto in fondo alla pagina account. La sola rimozio
 
 ## Scelta
 
-Il pulsante Esci è visibile nella barra principale e nell’intestazione dell’account. Tutti i pulsanti usano lo stesso endpoint POST `/auth/logout`, con origine obbligatoria e confronto completo di schema/host/porta. Un GET non termina alcuna sessione.
+Al momento dell’adozione Esci era visibile nella barra principale e nell’intestazione dell’account. L’aggiornamento della navigazione in ADR 0014 lo presenta in un solo punto: `/account`, raggiungibile da Tu. Tutti i pulsanti usano lo stesso endpoint POST `/auth/logout`, con origine obbligatoria e confronto completo di schema/host/porta. Un GET non termina alcuna sessione.
 
 Il server richiede la revoca locale o globale a Supabase, elimina cookie Auth e PKCE e riporta al login. La pulizia locale avviene anche se Auth è indisponibile; l’eventuale mancata uscita dagli altri dispositivi viene comunicata senza dichiarare una revoca globale riuscita. I cookie di un rinnovo eseguito prima del logout vengono scartati.
 
