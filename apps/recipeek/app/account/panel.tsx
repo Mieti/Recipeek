@@ -363,7 +363,7 @@ export default function AccountPanel({
                     ) : (
                       <p className="field-help">
                         {configuredProviders.length > 0
-                          ? 'Per creare un account, scegli un metodo disponibile qui sopra. Il recupero via email non è disponibile.'
+                          ? 'Per la beta, crea un account o accedi con Google. Il recupero password via email arriverà più avanti.'
                           : 'Registrazione e recupero via email non sono disponibili al momento.'}
                       </p>
                     ) : (

@@ -33,11 +33,11 @@ function PhotoUpload({value,onChange,label='Foto della ricetta',onBusyChange}:{v
     }catch(e){setError((e as Error).message);}
     finally{setBusy(false);onBusyChange(false);}
   }
-  return <div className="photo-upload">
+  return <div className={`photo-upload${value?' has-image':''}`}>
     {value&&<Photo src={value} title={label}/>}
     <label className={`upload-zone${value?' has-photo':''}`}>
       <Camera size={22}/><strong>{busy?'Caricamento…':value?'Cambia foto':label}</strong>
-      <span>JPEG, PNG o WebP · max 6 MB · rimozione dei metadati personali</span>
+      {!value&&<span>JPEG, PNG o WebP · max 6 MB</span>}
       <input type="file" accept="image/jpeg,image/png,image/webp" disabled={busy} aria-label={label} onChange={e=>{void upload(e.target.files?.[0]);e.currentTarget.value='';}}/>
     </label>
     {value&&<button type="button" className="text-button" onClick={()=>onChange('')}>Rimuovi foto</button>}
@@ -112,7 +112,7 @@ export default function RecipeEditor({initial,initialSection,onBusyChange,onDraf
           const expanded=section===index,buttonId=`${baseId}-section-button-${index}`,panelId=`${baseId}-section-panel-${index}`;
           const count=index===1?form.ingredients.length:index===2?form.steps.length:null;
           return <section className={`editor-section-card${expanded?' is-open':''}`} key={name}>
-            <h3><button type="button" className="editor-section-toggle" id={buttonId} aria-expanded={expanded} aria-controls={panelId} onClick={()=>setSection(index)}><span className="editor-section-number">0{index+1}</span><span>{name}</span>{count!==null&&<span className="editor-section-count">{count}</span>}<ChevronDown size={18} aria-hidden="true"/></button></h3>
+            <h3><button type="button" className="editor-section-toggle" id={buttonId} aria-expanded={expanded} aria-controls={panelId} onClick={()=>{setSection(index);requestAnimationFrame(()=>requestAnimationFrame(()=>document.getElementById(buttonId)?.scrollIntoView({block:'start'})));}}><span className="editor-section-number">0{index+1}</span><span>{name}</span>{count!==null&&<span className="editor-section-count">{count}</span>}<ChevronDown size={18} aria-hidden="true"/></button></h3>
             <div className="editor-section-panel" id={panelId} role="region" aria-labelledby={buttonId} hidden={!expanded}>
               {index===0&&<div className="editor-core-fields">
                 <PhotoUpload onBusyChange={uploadStatus} value={form.image} onChange={value=>set('image',value)}/>
