@@ -554,7 +554,7 @@
   }
 
   .recipe-flow-import .import-intro {
-    margin: 30px auto 18px;
+    margin: 24px auto 15px;
   }
 
   .recipe-flow-import .import-intro h1 {
@@ -563,12 +563,13 @@
 
   .recipe-flow-import > .import-card,
   .recipe-flow-import > .import-review {
-    padding: 20px 16px;
+    padding: 18px 14px;
     border-radius: 15px;
   }
 
   .recipe-flow-import .import-tabs {
     gap: 3px;
+    margin-bottom: 14px;
   }
 
   .recipe-flow-import .import-tabs button {
@@ -579,11 +580,24 @@
   }
 
   .recipe-flow-import .import-card textarea {
-    min-height: 160px;
+    min-height: 140px;
+  }
+
+  .recipe-flow-import .import-card label {
+    gap: 6px;
+    margin-block: 12px;
+  }
+
+  .recipe-flow-import .import-upload {
+    padding: 12px;
+  }
+
+  .recipe-flow-import .import-card > .muted {
+    margin-block: 12px;
   }
 
   .recipe-flow-import .import-activity {
-    min-height: max(340px, calc(100svh - 190px));
+    min-height: max(280px, calc(100svh - 190px));
   }
 
   .recipe-flow-import .import-history {
@@ -592,6 +606,24 @@
 
   .recipe-flow-import .import-review .draft-section-heading {
     align-items: flex-start;
+    padding: 6px 2px 8px;
+  }
+
+  .recipe-flow-import .import-review .draft-editor {
+    margin-top: 12px;
+  }
+
+  .recipe-flow-import .import-review .recipe-preview-content h3 {
+    margin: 22px 0 11px;
+    font-size: 21px;
+  }
+
+  .recipe-flow-import .import-review .recipe-preview-steps {
+    gap: 14px;
+  }
+
+  .recipe-flow-import .import-suggestion {
+    padding: 12px;
   }
 
   .recipe-flow-import .recipe-confirm {

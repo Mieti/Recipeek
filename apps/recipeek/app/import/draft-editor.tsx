@@ -36,7 +36,7 @@ export default function DraftEditor({recipe,setRecipe,servings,setServings}:Prop
     <div className="draft-segments" role="group" aria-label="Sezione della ricetta">
       {([['ingredients','Ingredienti',recipe.ingredients.length],['steps','Passaggi',recipe.steps.length],['details','Dettagli',null]] as const).map(([key,label,count])=><button type="button" key={key} aria-pressed={section===key} onClick={()=>changeSection(key)}>{label}{count!==null&&<span>{count}</span>}</button>)}
     </div>
-    <div className="draft-section-heading"><p>{section==='ingredients'?'Tocca un ingrediente per modificarlo.':section==='steps'?'Un passaggio alla volta, tutto sotto controllo.':'Le informazioni essenziali della ricetta.'}</p><span className="draft-autosave"><Check size={12}/> Salvataggio automatico</span></div>
+    <div className="draft-section-heading"><span className="draft-autosave"><Check size={12}/> Salvataggio automatico</span></div>
     {undo&&<div className="draft-undo" role="status"><span>{undo.label}</span><button type="button" onClick={()=>{undo.restore();setUndo(null);}}><Undo2 size={15}/>Annulla</button></div>}
     {section==='ingredients'&&<div className="draft-entry-list" aria-label="Ingredienti da modificare">
       {recipe.ingredients.map((i,index)=>{const open=selected===i.id;return <div className={`draft-entry${open?' is-open':''}`} key={i.id} data-entry={i.id}>

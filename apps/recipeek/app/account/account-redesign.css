@@ -431,7 +431,8 @@
   font: 26px/1 var(--serif, Georgia, serif);
 }
 
-.account-redesign .account-auth-heading h1 {
+.account-redesign .account-auth-heading h1,
+.account-redesign .account-auth-heading h2 {
   font-size: clamp(32px, 7vw, 38px);
   line-height: 1.1;
   letter-spacing: -1.3px;
@@ -465,6 +466,43 @@
   z-index: 1;
   padding: 0 13px;
   background: var(--account-paper);
+}
+
+.account-redesign.account-page--embedded .account-email-access {
+  margin-top: 13px;
+  padding-top: 7px;
+  border-top: 1px solid var(--account-line);
+}
+
+.account-redesign.account-page--embedded .account-email-access > summary {
+  display: flex;
+  align-items: center;
+  min-height: 42px;
+  color: var(--green, #315a44);
+  font-size: 13px;
+  font-weight: 650;
+  list-style: none;
+  cursor: pointer;
+}
+
+.account-redesign.account-page--embedded .account-email-access > summary::-webkit-details-marker {
+  display: none;
+}
+
+.account-redesign.account-page--embedded .account-email-access > summary::after {
+  content: '+';
+  margin-left: auto;
+  color: var(--account-muted);
+  font-size: 20px;
+  font-weight: 400;
+}
+
+.account-redesign.account-page--embedded .account-email-access[open] > summary::after {
+  content: '−';
+}
+
+.account-redesign.account-page--embedded .account-email-access-content {
+  padding-top: 9px;
 }
 
 .account-redesign.account-page--auth .account-card > form,
@@ -600,5 +638,88 @@
 @media (prefers-reduced-motion: reduce) {
   .account-redesign .account-card .button {
     transition: none;
+  }
+}
+
+.account-redesign.account-page--embedded {
+  display: block;
+  width: 100%;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--ink, #252a24);
+}
+
+.account-redesign.account-page--embedded .account-layout--embedded {
+  display: block;
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 0;
+}
+
+.account-redesign.account-page--embedded .account-card {
+  padding: clamp(22px, 5vw, 31px);
+  border-color: var(--line, #e5dfd3);
+  border-radius: 17px;
+  background: var(--paper, #fffefa);
+  box-shadow: 0 15px 40px #252a240a;
+}
+
+.account-redesign.account-page--embedded .account-auth-heading {
+  margin-bottom: 19px;
+}
+
+.account-redesign.account-page--embedded .account-auth-heading .eyebrow {
+  margin-bottom: 8px;
+}
+
+.account-redesign.account-page--embedded .account-auth-heading h1,
+.account-redesign.account-page--embedded .account-auth-heading h2 {
+  font-size: clamp(27px, 7vw, 33px);
+  letter-spacing: -1px;
+}
+
+.account-redesign.account-page--embedded .account-auth-heading > p:last-child {
+  margin-top: 6px;
+}
+
+.account-redesign.account-page--embedded .account-auth-providers {
+  gap: 10px;
+}
+
+.account-redesign.account-page--embedded .account-card form {
+  gap: 12px;
+}
+
+.account-redesign.account-page--embedded .account-card form .button {
+  min-height: 49px;
+}
+
+.account-redesign.account-page--embedded .account-switch {
+  margin-top: 12px;
+}
+
+.account-redesign.account-page--embedded .account-switch .field-help {
+  text-align: left;
+}
+
+@media (max-width: 420px) {
+  .account-redesign.account-page--embedded .account-card {
+    padding: 17px 15px;
+  }
+
+  .account-redesign.account-page--embedded .account-auth-heading {
+    margin-bottom: 12px;
+  }
+
+  .account-redesign.account-page--embedded .account-auth-heading h1,
+  .account-redesign.account-page--embedded .account-auth-heading h2 {
+    font-size: 26px;
+  }
+
+  .account-redesign.account-page--embedded .account-auth-providers .button {
+    min-height: 47px;
   }
 }

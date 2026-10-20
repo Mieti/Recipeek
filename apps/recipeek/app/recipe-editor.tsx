@@ -5,6 +5,7 @@ import {ArrowDown,ArrowUp,Camera,Check,ChevronDown,Lock,Plus,Trash2,X} from 'luc
 import {categories,methods,recipeSchema,type RecipeInput} from '../lib/model';
 import {canonicalUnit,isKnownUnit,unitGroups} from '../lib/units';
 import {preparePhoto} from '../lib/prepare-photo';
+import './recipe-editor-compact.css';
 
 type Props={
   initial:RecipeInput;
@@ -35,7 +36,7 @@ function PhotoUpload({value,onChange,label='Foto della ricetta',onBusyChange}:{v
   }
   return <div className={`photo-upload${value?' has-image':''}`}>
     {value&&<Photo src={value} title={label}/>}
-    <label className={`upload-zone${value?' has-photo':''}`}>
+    <label className={`upload-zone${value?' has-photo':' is-compact'}`}>
       <Camera size={22}/><strong>{busy?'Caricamento…':value?'Cambia foto':label}</strong>
       {!value&&<span>JPEG, PNG o WebP · max 6 MB</span>}
       <input type="file" accept="image/jpeg,image/png,image/webp" disabled={busy} aria-label={label} onChange={e=>{void upload(e.target.files?.[0]);e.currentTarget.value='';}}/>
@@ -103,7 +104,7 @@ export default function RecipeEditor({initial,initialSection,onBusyChange,onDraf
   return <div className="recipe-editor">
     <fieldset disabled={saving||uploads>0}>
       <header className="editor-intro">
-        <div><h2>{'id'in initial?'Modifica la ricetta':'Nuova ricetta'}</h2><p className="muted">Salva i cambiamenti mentre lavori.</p></div>
+        <div><h2>{'id'in initial?'Modifica la ricetta':'Nuova ricetta'}</h2></div>
         <p className="field-help editor-autosave" role="status" aria-live="polite">{persisted?'Bozza salvata automaticamente su questo browser.':'Impossibile salvare la bozza qui. Salva la ricetta prima di chiudere.'}</p>
       </header>
 
@@ -115,31 +116,33 @@ export default function RecipeEditor({initial,initialSection,onBusyChange,onDraf
             <h3><button type="button" className="editor-section-toggle" id={buttonId} aria-expanded={expanded} aria-controls={panelId} onClick={()=>{setSection(index);requestAnimationFrame(()=>requestAnimationFrame(()=>document.getElementById(buttonId)?.scrollIntoView({block:'start'})));}}><span className="editor-section-number">0{index+1}</span><span>{name}</span>{count!==null&&<span className="editor-section-count">{count}</span>}<ChevronDown size={18} aria-hidden="true"/></button></h3>
             <div className="editor-section-panel" id={panelId} role="region" aria-labelledby={buttonId} hidden={!expanded}>
               {index===0&&<div className="editor-core-fields">
-                <PhotoUpload onBusyChange={uploadStatus} value={form.image} onChange={value=>set('image',value)}/>
                 <label>Titolo<input value={form.title} maxLength={140} placeholder="Es. La lasagna della domenica" onChange={e=>set('title',e.target.value)}/></label>
                 <label>Descrizione<textarea value={form.description} maxLength={3000} placeholder="Cosa rende speciale questo piatto?" onChange={e=>set('description',e.target.value)}/></label>
-                <div className="form-grid">
-                  <label>Categoria<select value={form.category} onChange={e=>set('category',e.target.value as RecipeInput['category'])}>{categories.map(category=><option key={category}>{category}</option>)}</select></label>
-                  <label>Metodo di cottura<select value={form.method} onChange={e=>set('method',e.target.value as RecipeInput['method'])}>{methods.map(method=><option key={method}>{method}</option>)}</select></label>
-                  <label>Porzioni<input type="number" inputMode="numeric" min={1} max={100} value={form.servings} onChange={e=>set('servings',Number(e.target.value))}/></label>
-                  <label>Preparazione · minuti<input type="number" inputMode="numeric" min={0} max={1440} value={form.prepMinutes} onChange={e=>set('prepMinutes',Number(e.target.value))}/></label>
-                  <label>Cottura · minuti<input type="number" inputMode="numeric" min={0} max={1440} value={form.cookMinutes} onChange={e=>set('cookMinutes',Number(e.target.value))}/></label>
-                  <label>Raccolta<input list={collectionListId} value={form.collection} maxLength={80} placeholder="Es. Le mie certezze" onChange={e=>set('collection',e.target.value)}/><datalist id={collectionListId}>{collections.map(collection=><option value={collection} key={collection}/>)}</datalist></label>
-                </div>
-                <label>Appunti di cucina<textarea value={form.notes} maxLength={10000} placeholder="Un dettaglio da ricordare…" onChange={e=>set('notes',e.target.value)}/></label>
-                <label className="check-label editor-favorite"><input type="checkbox" checked={form.favorite} onChange={e=>set('favorite',e.target.checked)}/>Aggiungi alle preferite</label>
-                <details className="editor-advanced"><summary>Fonte, teglia e condivisione</summary><div className="editor-advanced-fields">
+                <label>Porzioni<input type="number" inputMode="numeric" min={1} max={100} value={form.servings} onChange={e=>set('servings',Number(e.target.value))}/></label>
+                <PhotoUpload onBusyChange={uploadStatus} value={form.image} onChange={value=>set('image',value)}/>
+                <details className="editor-advanced"><summary>Altri dettagli</summary><div className="editor-advanced-fields">
+                  <div className="form-grid">
+                    <label>Categoria<select value={form.category} onChange={e=>set('category',e.target.value as RecipeInput['category'])}>{categories.map(category=><option key={category}>{category}</option>)}</select></label>
+                    <label>Metodo di cottura<select value={form.method} onChange={e=>set('method',e.target.value as RecipeInput['method'])}>{methods.map(method=><option key={method}>{method}</option>)}</select></label>
+                    <label>Preparazione · minuti<input type="number" inputMode="numeric" min={0} max={1440} value={form.prepMinutes} onChange={e=>set('prepMinutes',Number(e.target.value))}/></label>
+                    <label>Cottura · minuti<input type="number" inputMode="numeric" min={0} max={1440} value={form.cookMinutes} onChange={e=>set('cookMinutes',Number(e.target.value))}/></label>
+                    <label>Raccolta<input list={collectionListId} value={form.collection} maxLength={80} placeholder="Es. Le mie certezze" onChange={e=>set('collection',e.target.value)}/><datalist id={collectionListId}>{collections.map(collection=><option value={collection} key={collection}/>)}</datalist></label>
+                  </div>
+                  <label>Appunti di cucina<textarea value={form.notes} maxLength={10000} placeholder="Un dettaglio da ricordare…" onChange={e=>set('notes',e.target.value)}/></label>
+                  <label className="check-label editor-favorite"><input type="checkbox" checked={form.favorite} onChange={e=>set('favorite',e.target.checked)}/>Aggiungi alle preferite</label>
+                  <details className="editor-advanced"><summary>Fonte, teglia e condivisione</summary><div className="editor-advanced-fields">
                   <label>Link della fonte<input type="url" inputMode="url" value={form.sourceUrl} placeholder="https://…" onChange={e=>set('sourceUrl',e.target.value)}/></label>
                   <label>Autore, libro o riferimento<input value={form.sourceAuthor} maxLength={200} placeholder="Es. Il quaderno di nonna, pagina 24" onChange={e=>set('sourceAuthor',e.target.value)}/></label>
                   <label className="check-label"><input type="checkbox" checked={Boolean(form.pan)} onChange={e=>set('pan',e.target.checked?{shape:'round',width:20,length:20}:null)}/>Questa ricetta usa una teglia</label>
                   {form.pan&&<PanFields pan={form.pan} onChange={value=>set('pan',value)}/ >}
                   <label>Visibilità<select value={form.visibility} onChange={e=>set('visibility',e.target.value as RecipeInput['visibility'])}><option value="private">Privata · solo per me</option><option value="shared">Condivisa</option></select></label>
                   <p className="field-help">Condividi soltanto contenuti che puoi rendere visibili agli altri. Le note personali restano parte della ricetta condivisa.</p>
+                  </div></details>
                 </div></details>
               </div>}
 
               {index===1&&<div className="editor-entry-list" aria-label="Ingredienti della ricetta">
-                <p className="field-help">Le dosi si riferiscono a {form.servings} persone. Puoi indicare “quanto basta” o lasciare la dose da specificare.</p>
+                <p className="field-help">Dosi per {form.servings} porzioni.</p>
                 {form.ingredients.map((item,itemIndex)=>{
                   const expanded=selectedIngredient===item.id,panel=`${baseId}-ingredient-panel-${itemIndex}`,nameId=`${baseId}-ingredient-name-${itemIndex}`,quantityId=`${baseId}-ingredient-quantity-${itemIndex}`,unitId=`${baseId}-ingredient-unit-${itemIndex}`;
                   return <article className={`editor-entry${expanded?' is-open':''}`} key={item.id}>
@@ -159,7 +162,6 @@ export default function RecipeEditor({initial,initialSection,onBusyChange,onDraf
               </div>}
 
               {index===2&&<div className="editor-entry-list" aria-label="Procedimento della ricetta">
-                <p className="field-help">Aggiungi timer, foto e ingredienti collegati solo quando servono nel passaggio.</p>
                 {form.steps.map((item,itemIndex)=>{
                   const expanded=selectedStep===item.id,panel=`${baseId}-step-panel-${itemIndex}`,textId=`${baseId}-step-text-${itemIndex}`,timerId=`${baseId}-step-timer-${itemIndex}`,videoId=`${baseId}-step-video-${itemIndex}`;
                   return <article className={`editor-entry editor-step${expanded?' is-open':''}`} key={item.id}>

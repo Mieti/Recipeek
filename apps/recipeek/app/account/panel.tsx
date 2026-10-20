@@ -20,6 +20,7 @@ type Props = {
   legacy: { email: string } | null;
   legacyActive?: boolean;
   accountIssue?: string;
+  embedded?: boolean;
 };
 
 type View = 'signin' | 'signup' | 'forgot';
@@ -59,10 +60,12 @@ export default function AccountPanel({
   storageUserId,
   legacyActive = false,
   accountIssue = '',
+  embedded = false,
 }: Props) {
   const client = useMemo(() => (config ? createBrowserClient(config.url, config.key) : null), [config]);
   const [view, setView] = useState<View>('signin');
   const [busy, setBusy] = useState(false);
+  const [emailOpen, setEmailOpen] = useState(!providers.includes('google'));
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [reset, setReset] = useState(false);
@@ -105,7 +108,7 @@ export default function AccountPanel({
     }
   }
 
-  function callback(next = '/account') {
+  function callback(next = embedded ? '/' : '/account') {
     return `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
   }
 
@@ -190,16 +193,51 @@ export default function AccountPanel({
   }
 
   const configuredProviders = socialProviders.filter((provider) => providers.includes(provider.id));
+  const authTitle = view === 'signup' ? 'Crea il tuo account' : view === 'forgot' ? 'Recupera l’accesso' : embedded ? 'Accedi' : 'Bentornato';
+  const emailAccess = (
+    <>
+      <form onSubmit={submit}>
+        {view === 'signup' && <label>Come ti chiami?<input autoComplete="name" maxLength={60} required value={name} onChange={(event) => setName(event.target.value)} /></label>}
+        <label>Email<input type="email" autoComplete="email" maxLength={254} required value={email} onChange={(event) => setEmail(event.target.value)} /></label>
+        {view !== 'forgot' && <label>Password<input type="password" autoComplete={view === 'signup' ? 'new-password' : 'current-password'} minLength={view === 'signup' ? 12 : 1} maxLength={128} required value={password} onChange={(event) => setPassword(event.target.value)} /></label>}
+        {view === 'signup' && (
+          <>
+            <label>Ripeti la password<input type="password" autoComplete="new-password" minLength={12} maxLength={128} required value={confirmation} onChange={(event) => setConfirmation(event.target.value)} /></label>
+            <p className="field-help">Almeno 12 caratteri. Riceverai un’email per confermare l’indirizzo.</p>
+          </>
+        )}
+        <button className="button primary" disabled={busy}>
+          {busy ? 'Un momento…' : view === 'signup' ? 'Crea account' : view === 'forgot' ? 'Invia il collegamento' : 'Accedi'}
+        </button>
+      </form>
+
+      <div className="account-switch">
+        {view === 'signin' ? emailDeliveryReady ? (
+          <>
+            <button className="text-button" onClick={() => { setView('forgot'); setError(''); setMessage(''); setPassword(''); }}>Password dimenticata?</button>
+            <button className="text-button" onClick={() => { setView('signup'); setError(''); setMessage(''); setPassword(''); }}>Crea un account</button>
+          </>
+        ) : (
+          <p className="field-help">Email: accesso solo per account esistenti. Registrazione e recupero via email non sono attivi.</p>
+        ) : (
+          <button className="text-button" onClick={() => { setView('signin'); setError(''); setMessage(''); setPassword(''); }}>Hai già un account? Accedi</button>
+        )}
+      </div>
+    </>
+  );
+  const Root = embedded ? 'section' : 'main';
   return (
-    <main className={`account-page account-redesign${!user && config ? ' account-page--auth' : ''}`}>
-      <header className="account-brandbar">
-        <Link className="brand" href="/" aria-label="Recipeek, pagina iniziale">
-          recipeek<span>✳</span>
-        </Link>
-        {(user || legacyActive) && <Link className="account-back-link" href="/?view=you"><ArrowLeft size={17} />Tu</Link>}
-      </header>
-      <div className={`account-layout${user ? ' account-layout--manage' : ''}`}>
-        {(user || !config) && (
+    <Root className={`account-page account-redesign${!user && config ? ' account-page--auth' : ''}${embedded ? ' account-page--embedded' : ''}`} aria-label={embedded ? 'Accesso a Recipeek' : undefined}>
+      {!embedded && (
+        <header className="account-brandbar">
+          <Link className="brand" href="/" aria-label="Recipeek, pagina iniziale">
+            recipeek<span>✳</span>
+          </Link>
+          {(user || legacyActive) && <Link className="account-back-link" href="/?view=you"><ArrowLeft size={17} />Tu</Link>}
+        </header>
+      )}
+      <div className={`account-layout${user ? ' account-layout--manage' : ''}${embedded ? ' account-layout--embedded' : ''}`}>
+        {!embedded && (user || !config) && (
           <section className="account-intro">
             <p className="eyebrow">{user ? 'ACCOUNT RECIPEEK' : 'IL TUO SPAZIO IN CUCINA'}</p>
             <h1>{user ? 'Il tuo account.' : 'Le tue ricette,\nil tuo account.'}</h1>
@@ -317,10 +355,10 @@ export default function AccountPanel({
           ) : (
             <>
               <div className="account-auth-heading">
-                <span className="account-auth-symbol" aria-hidden="true">✳</span>
-                <p className="eyebrow">IL TUO RICETTARIO</p>
-                <h1>{view === 'signup' ? 'Crea il tuo account' : view === 'forgot' ? 'Recupera l’accesso' : 'Bentornato'}</h1>
-                <p>{view === 'signup' ? 'Le tue ricette, in un solo posto.' : view === 'forgot' ? 'Ti invieremo un link per reimpostare la password.' : 'Accedi alle tue ricette.'}</p>
+                {!embedded && <span className="account-auth-symbol" aria-hidden="true">✳</span>}
+                <p className="eyebrow">{embedded ? 'ACCESSO RECIPEEK' : 'IL TUO RICETTARIO'}</p>
+                {embedded ? <h2>{authTitle}</h2> : <h1>{authTitle}</h1>}
+                <p>{view === 'signup' ? 'Le tue ricette, in un solo posto.' : view === 'forgot' ? 'Ti invieremo un link per reimpostare la password.' : embedded ? 'Ritrova le tue ricette.' : 'Accedi alle tue ricette.'}</p>
               </div>
 
               {!settingsAvailable && <p className="account-auth-notice" role="status">Il servizio di accesso non è disponibile al momento. Riprova tra poco.</p>}
@@ -335,43 +373,14 @@ export default function AccountPanel({
                 </div>
               )}
 
-              {emailEnabled && view !== 'forgot' && configuredProviders.length > 0 && <div className="account-divider"><span>oppure con email</span></div>}
+              {emailEnabled && !embedded && view !== 'forgot' && configuredProviders.length > 0 && <div className="account-divider"><span>oppure con email</span></div>}
 
-              {emailEnabled && (
-                <>
-                  <form onSubmit={submit}>
-                    {view === 'signup' && <label>Come ti chiami?<input autoComplete="name" maxLength={60} required value={name} onChange={(event) => setName(event.target.value)} /></label>}
-                    <label>Email<input type="email" autoComplete="email" maxLength={254} required value={email} onChange={(event) => setEmail(event.target.value)} /></label>
-                    {view !== 'forgot' && <label>Password<input type="password" autoComplete={view === 'signup' ? 'new-password' : 'current-password'} minLength={view === 'signup' ? 12 : 1} maxLength={128} required value={password} onChange={(event) => setPassword(event.target.value)} /></label>}
-                    {view === 'signup' && (
-                      <>
-                        <label>Ripeti la password<input type="password" autoComplete="new-password" minLength={12} maxLength={128} required value={confirmation} onChange={(event) => setConfirmation(event.target.value)} /></label>
-                        <p className="field-help">Almeno 12 caratteri. Riceverai un’email per confermare l’indirizzo.</p>
-                      </>
-                    )}
-                    <button className="button primary" disabled={busy}>
-                      {busy ? 'Un momento…' : view === 'signup' ? 'Crea account' : view === 'forgot' ? 'Invia il collegamento' : 'Accedi'}
-                    </button>
-                  </form>
-
-                  <div className="account-switch">
-                    {view === 'signin' ? emailDeliveryReady ? (
-                      <>
-                        <button className="text-button" onClick={() => { setView('forgot'); setError(''); setMessage(''); setPassword(''); }}>Password dimenticata?</button>
-                        <button className="text-button" onClick={() => { setView('signup'); setError(''); setMessage(''); setPassword(''); }}>Crea un account</button>
-                      </>
-                    ) : (
-                      <p className="field-help">
-                        {configuredProviders.length > 0
-                          ? 'Per la beta, crea un account o accedi con Google. Il recupero password via email arriverà più avanti.'
-                          : 'Registrazione e recupero via email non sono disponibili al momento.'}
-                      </p>
-                    ) : (
-                      <button className="text-button" onClick={() => { setView('signin'); setError(''); setMessage(''); setPassword(''); }}>Hai già un account? Accedi</button>
-                    )}
-                  </div>
-                </>
-              )}
+              {emailEnabled && (embedded ? (
+                <details className="account-email-access" open={emailOpen} onToggle={(event) => setEmailOpen(event.currentTarget.open)}>
+                  <summary>{view === 'signup' ? 'Crea account con email' : view === 'forgot' ? 'Recupera accesso via email' : 'Accedi con email'}</summary>
+                  <div className="account-email-access-content">{emailAccess}</div>
+                </details>
+              ) : emailAccess)}
 
               {settingsAvailable && !emailEnabled && configuredProviders.length === 0 && (
                 <p className="account-auth-notice">L’accesso non è disponibile al momento. Riprova tra poco.</p>
@@ -380,6 +389,6 @@ export default function AccountPanel({
           )}
         </section>
       </div>
-    </main>
+    </Root>
   );
 }
