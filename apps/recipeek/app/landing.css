@@ -436,8 +436,15 @@
   }
 
   .landing-notebook .landing-features article > svg {
+    grid-column: 1;
     grid-row: 1 / span 3;
     margin: 2px 0 0;
+  }
+
+  .landing-notebook .landing-features article > .eyebrow,
+  .landing-notebook .landing-features article > h3,
+  .landing-notebook .landing-features article > p {
+    grid-column: 2;
   }
 
   .landing-notebook .landing-features .eyebrow {
